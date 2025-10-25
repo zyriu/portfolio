@@ -1,0 +1,957 @@
+/* Color Scheme */
+:root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-card: #1e293b;
+    --bg-hover: #334155;
+    
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    --accent-primary: #8b5cf6;
+    --accent-hover: #7c3aed;
+    --accent-light: #a78bfa;
+    
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    
+    --border: #334155;
+    --shadow: rgba(0, 0, 0, 0.3);
+    
+    --progress-running: #a78bfa;
+    --progress-waiting: #6366f1;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400;
+    src: local(""),
+    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+}
+
+#app {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* App Container */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: var(--bg-primary);
+}
+
+/* Header */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    height: 60px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 8px var(--shadow);
+    z-index: 100;
+}
+
+.app-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.burger-btn {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.burger-btn:hover {
+    background-color: var(--bg-hover);
+}
+
+/* Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+    backdrop-filter: blur(2px);
+}
+
+/* Menu Drawers */
+.menu-drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px var(--shadow);
+    z-index: 300;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease-out;
+}
+
+.menu-drawer-left {
+    left: 0;
+    border-left: none;
+}
+
+.menu-drawer-right {
+    right: 0;
+    border-right: none;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.menu-drawer-right {
+    animation-name: slideInRight;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.menu-header {
+    padding: 1.25rem 1.25rem 1rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+}
+
+.menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.menu-item:hover {
+    background-color: var(--bg-hover);
+}
+
+.menu-item-active {
+    background-color: var(--bg-hover);
+    border-left-color: var(--accent-primary);
+    color: var(--accent-light);
+    font-weight: 500;
+}
+
+/* Main Content */
+.app-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+}
+
+/* Settings Panel */
+.settings-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    background-color: var(--bg-secondary);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.settings-panel.closing {
+    animation: slideOutRight 0.3s ease-in;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    height: 60px;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--bg-tertiary);
+}
+
+.settings-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.settings-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.settings-close-btn:hover {
+    background-color: var(--bg-hover);
+}
+
+.settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.settings-single-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    max-width: 1024px;
+    margin: 0 auto;
+}
+
+/* Remove arrow selectors from number inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* Dashboard */
+.dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.dashboard-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: min-content;
+    gap: 1.5rem;
+}
+
+/* Job Cards */
+.job-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.5rem 1rem 1.5rem;
+    box-shadow: 0 2px 8px var(--shadow);
+    transition: all 0.2s;
+}
+
+/* Only error cards are hoverable and clickable */
+.job-card.has-error:hover:not(:has(.job-reload-btn:hover)) {
+    background-color: var(--bg-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+
+.job-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.job-name-and-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.job-name {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.job-error-icon {
+    font-size: 0.875rem;
+    animation: errorPulse 2s ease-in-out infinite;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #ef4444;
+    border: 2px solid #dc2626;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.job-error-icon:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3);
+}
+
+@keyframes errorPulse {
+    0%, 100% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+    50% {
+        opacity: 1;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.4);
+    }
+}
+
+.job-reload-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.125rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+}
+
+.job-reload-btn:hover:not(:disabled) {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.job-reload-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.job-card.minimized {
+    padding: 1rem 1.5rem;
+    align-self: start;
+}
+
+.job-card.minimized .job-card-header {
+    margin-bottom: 0.5rem;
+}
+
+/* Panel Logs Container */
+.panel-logs-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.executions-list h2 {
+    margin: 0 0 20px 0;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+}
+
+.no-executions {
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+.executions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.job-execution-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 16px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.job-execution-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-primary);
+}
+
+.job-execution-item.selected {
+    border-color: var(--accent-primary);
+    background: var(--bg-hover);
+}
+
+.execution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.execution-status {
+    font-size: 0.8rem;
+    padding: 5px 4px 3px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.execution-status.running {
+    color: var(--warning);
+    background-color: rgba(245, 158, 11, 0.1);
+    animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+.execution-status.completed {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.execution-status.failed {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error);
+}
+
+.execution-time {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.execution-job-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.execution-duration {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* Log Viewer Card - Inline expandable card */
+.log-viewer-card-wrapper {
+    grid-column: 1 / -1;
+    margin: 0;
+    animation: expandCard 0.3s ease-out;
+}
+
+.log-viewer-card-wrapper.closing {
+    animation: collapseCard 0.3s ease-in;
+}
+
+@keyframes expandCard {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        max-height: 400px;
+        transform: translateY(0);
+    }
+}
+
+@keyframes collapseCard {
+    from {
+        opacity: 1;
+        max-height: 400px;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+}
+
+.log-viewer-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    height: 350px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px var(--shadow);
+}
+
+.log-viewer-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+}
+
+.log-viewer-card-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.log-viewer-card-job-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.log-viewer-card-time {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.log-viewer-card-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.close-log-viewer-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    min-width: 24px;
+}
+
+.close-log-viewer-card:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.log-viewer-card-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--bg-secondary);
+}
+
+.execution-status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.execution-status-badge.running {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.execution-status-badge.completed {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.execution-status-badge.failed {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error);
+}
+
+/* Log entries within the card */
+.log-viewer-card-content .log-entry {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 8px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+    align-items: flex-start;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.log-viewer-card-content .log-entry:hover {
+    background: var(--bg-tertiary);
+}
+
+.log-viewer-card-content .log-entry:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.log-viewer-card-content .log-timestamp {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    min-width: 80px;
+    font-family: monospace;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+.log-viewer-card-content .log-message {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    flex: 1;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.log-viewer-card-content .log-entry.info .log-message {
+    color: var(--text-primary);
+}
+
+.log-viewer-card-content .log-entry.success .log-message {
+    color: var(--success);
+}
+
+.log-viewer-card-content .log-entry.error .log-message {
+    color: var(--error);
+}
+
+.log-viewer-card-content .no-logs {
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+.job-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+    text-transform: capitalize;
+}
+
+.job-status {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.job-status.running {
+    color: var(--success);
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+.job-status.executing {
+    color: var(--warning);
+    background-color: rgba(245, 158, 11, 0.1);
+    animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% {
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.job-status.paused {
+    color: var(--text-muted);
+    background-color: rgba(100, 116, 139, 0.1);
+}
+
+/* Progress Bar */
+.job-progress-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0;
+}
+
+.job-progress-container {
+    width: 80%;
+    height: 8px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.job-timer {
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: bold;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.job-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--progress-waiting), var(--accent-light));
+    border-radius: 4px;
+    transition: width 0.3s ease-out;
+}
+
+.job-progress-bar.running {
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Job Info */
+.job-info {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.job-time {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.job-time .label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.job-time .value {
+    font-size: 1.125rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Job Logs */
+.job-logs {
+    height: 150px;
+    overflow-y: auto;
+    background-color: var(--bg-primary);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.job-log-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.job-log-entry {
+    margin-bottom: 0.25rem;
+    display: flex;
+    gap: 0.5rem;
+    line-height: 1.4;
+}
+
+.job-log-time {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.job-log-message {
+    color: var(--text-secondary);
+}
+
+.job-log-entry.error .job-log-message {
+    color: var(--error);
+    font-weight: 500;
+}
+
+.job-log-entry.success .job-log-message {
+    color: var(--success);
+}
+
+.job-logs::-webkit-scrollbar {
+    width: 6px;
+}
+
+.job-logs::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+.job-logs::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+}
+
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Loading */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bg-hover);
+}
+
+/* Panel Card Layout - Using App.css definitions for consistency */
+
+/* Panel Button Styling */
+.panel-button {
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.panel-button:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.panel-button:disabled {
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Panel Cards Grid - Using App.css definitions for consistency */
+
+/* Removed the auto margin for save buttons since they're now in headers */

@@ -1,0 +1,307 @@
+/* Panel Styles - Compact Design */
+.panel-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0.5rem;
+}
+
+.panel-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+}
+
+/* Grid for cards - 2 columns */
+.panel-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.875rem;
+    align-items: start;
+}
+
+@media (max-width: 1200px) {
+    .panel-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Panel Cards - Flatter, more compact */
+.panel-card {
+    background-color: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.875rem;
+    margin-bottom: 0.875rem;
+}
+
+.panel-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.panel-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Panel Rows - Fixed 2 columns */
+.panel-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+    .panel-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Panel Fields */
+.panel-field {
+    display: block;
+}
+
+.panel-field-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+}
+
+/* Panel Inputs - Smaller, more compact */
+.panel-input {
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: border-color 0.15s;
+}
+
+.panel-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.panel-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Ensure password inputs have same styling as text inputs */
+input[type="password"].panel-input {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.875rem;
+    line-height: 1.25;
+}
+
+/* Panel Switches - Match input field height */
+.panel-switch {
+    height: 35px;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.panel-switch:hover {
+    background-color: var(--bg-hover);
+}
+
+.panel-switch-enabled {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.panel-switch-enabled:hover {
+    background-color: rgba(16, 185, 129, 0.2);
+}
+
+/* Panel Buttons - Smaller, flatter */
+.panel-button {
+    padding: 0.5rem 1rem;
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    white-space: nowrap;
+}
+
+.panel-button:hover {
+    background-color: var(--accent-hover);
+}
+
+.panel-button:active {
+    transform: scale(0.98);
+}
+
+/* Flex helpers for buttons */
+.panel-button-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Wallet Lists - More compact */
+.wallet-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.wallet-item {
+    display: grid;
+    grid-template-columns: 0.8fr 1.5fr auto;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .wallet-item {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Select dropdown - Match panel-input exactly */
+.panel-select {
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+}
+
+.panel-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background-color: var(--bg-tertiary);
+}
+
+.form-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn:hover {
+    background-color: var(--accent-hover);
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-hover);
+}
+
+.btn-danger {
+    background-color: var(--error);
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+/* Cards */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px var(--shadow);
+}
+
+/* Section */
+.section {
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}

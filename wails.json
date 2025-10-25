@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Portfolio",
+  "outputfilename": "Portfolio",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Zyriu",
+    "email": "zyriu@protonmail.com"
+  },
+  "width": 1600,
+  "height": 900,
+  "minWidth": 1600,
+  "minHeight": 900,
+  "disableResize": false,
+  "fullscreen": false,
+  "alwaysOnTop": false
+}
