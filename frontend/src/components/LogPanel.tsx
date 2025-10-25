@@ -84,24 +84,12 @@ function LogViewerCard({ execution }: { execution: JobExecution }) {
   );
 }
 
-export default function LogPanel({ initialJobName }: { initialJobName?: string }) {
+export default function LogPanel() {
   const { executions } = useJobExecution();
   const [selectedExecution, setSelectedExecution] = useState<JobExecution | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const gridRef = React.useRef<HTMLDivElement>(null);
   const [columnsPerRow, setColumnsPerRow] = useState(1);
-
-  // Auto-select the most recent failed execution for the initialJobName
-  useEffect(() => {
-    if (initialJobName) {
-      const failedExecution = executions.find(
-        exec => exec.jobName === initialJobName && exec.status === 'failed'
-      );
-      if (failedExecution) {
-        setSelectedExecution(failedExecution);
-      }
-    }
-  }, [initialJobName, executions]);
 
   // Calculate how many columns fit in the grid
   useEffect(() => {

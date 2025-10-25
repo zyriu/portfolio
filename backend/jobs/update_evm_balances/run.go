@@ -70,6 +70,8 @@ func Run(ctx context.Context, _ ...any) error {
 			return fmt.Errorf("decode response: %w", err)
 		}
 
+		recordsToDelete := make([]int64, 0)
+
 		for _, evmChainBalances := range evmMultiChainBalances {
 			chain := evmChainBalances.Blockchain
 			if strings.Contains(chainsToUpsert, chain) {
@@ -95,7 +97,30 @@ func Run(ctx context.Context, _ ...any) error {
 						})
 					}
 				}
+
+				updateStatus(fmt.Sprintf("[%s] Checking for existing records to clean up...", wallet.Label))
+				matches, err := g.GetRecords(ctx, "Positions_Crypto_", fmt.Sprintf("filter={\"Wallet\":[\"%s\"],\"Chain\":[\"%s\"]}", wallet.Label, c.NormalizeBlockchainForGrist(chain)))
+				if err != nil {
+					return err
+				}
+
+				if len(matches.Records) > 0 {
+					for _, match := range matches.Records {
+						recordsToDelete = append(recordsToDelete, match.RecordID)
+					}
+				}
 			}
+		}
+
+		if len(recordsToDelete) > 0 {
+			updateStatus(fmt.Sprintf("[%s] Deleting %d old record(s)...", wallet.Label, len(recordsToDelete)))
+			if err := g.DeleteRecords(ctx, "Positions_Crypto_", recordsToDelete); err != nil {
+				return err
+			}
+
+			updateStatus(fmt.Sprintf("[%s] Deleted %d existing positions", wallet.Label, len(recordsToDelete)))
+		} else {
+			updateStatus(fmt.Sprintf("[%s] No old records to delete", wallet.Label))
 		}
 
 		updateStatus(fmt.Sprintf("[%s] Upserting %d positions to Grist...", wallet.Label, len(positions)))

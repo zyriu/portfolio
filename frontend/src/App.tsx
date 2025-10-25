@@ -19,8 +19,6 @@ interface JobState {
 function AppContent() {
   const [section, setSection] = useState<Section>("dashboard");
   const [jobs, setJobs] = useState<JobState[]>([]);
-  const [selectedErrorJob, setSelectedErrorJob] = useState<string | undefined>(undefined);
-  const [acknowledgedErrors, setAcknowledgedErrors] = useState<Set<string>>(new Set());
   const { setExecutions } = useJobExecution();
 
   const fetchJobs = async () => {
@@ -66,45 +64,15 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [setExecutions]);
 
-  const handleNavigateToError = (jobName: string) => {
-    setSelectedErrorJob(jobName);
-    setSection("logs");
-    // Mark this error as acknowledged
-    setAcknowledgedErrors(prev => new Set(prev).add(jobName));
-  };
-
-  // Clear selected error job when navigating away from logs
-  useEffect(() => {
-    if (section !== "logs") {
-      setSelectedErrorJob(undefined);
-    }
-  }, [section]);
-
-  // Clear acknowledged errors when job succeeds or error changes
-  useEffect(() => {
-    jobs.forEach(job => {
-      // If job no longer has an error, remove it from acknowledged set
-      if (!job.err && acknowledgedErrors.has(job.name)) {
-        setAcknowledgedErrors(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(job.name);
-          return newSet;
-        });
-      }
-    });
-  }, [jobs, acknowledgedErrors]);
-
   return (
     <Layout section={section} setSection={setSection}>
       {section === "dashboard" && (
         <Dashboard 
           jobs={jobs} 
           onRefreshJobs={fetchJobs}
-          onNavigateToError={handleNavigateToError}
-          acknowledgedErrors={acknowledgedErrors}
         />
       )}
-      {section === "logs" && <Logs initialJobName={selectedErrorJob} />}
+      {section === "logs" && <Logs />}
     </Layout>
   );
 }

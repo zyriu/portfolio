@@ -78,7 +78,6 @@ func Run(ctx context.Context, args ...any) error {
 		}
 
 		var positions []grist.Upsert
-		var prices []grist.Upsert
 		var singleChainBalance coinstats.SingleChainBalance
 		if err := json.Unmarshal(resp.Body, &singleChainBalance.Balances); err != nil {
 			return fmt.Errorf("decode response for %s: %w (body: %s)", wallet.Label, err, string(resp.Body))
@@ -107,15 +106,6 @@ func Run(ctx context.Context, args ...any) error {
 					"Asset_Type": token.IsStableOrVolatile(ticker),
 				},
 			})
-
-			prices = append(prices, grist.Upsert{
-				Require: map[string]any{
-					"Ticker": ticker,
-				},
-				Fields: map[string]any{
-					"Price": balance.Price,
-				},
-			})
 		}
 
 		updateStatus(fmt.Sprintf("[%s] Checking for existing records to clean up...", wallet.Label))
@@ -135,6 +125,8 @@ func Run(ctx context.Context, args ...any) error {
 			if err := g.DeleteRecords(ctx, "Positions_Crypto_", recordsToDelete); err != nil {
 				return err
 			}
+
+			updateStatus(fmt.Sprintf("[%s] Deleted %d existing positions", wallet.Label, len(recordsToDelete)))
 		} else {
 			updateStatus(fmt.Sprintf("[%s] No old records to delete", wallet.Label))
 		}
@@ -142,11 +134,6 @@ func Run(ctx context.Context, args ...any) error {
 		updateStatus(fmt.Sprintf("[%s] Upserting %d positions to Grist...", wallet.Label, len(positions)))
 		if err := g.UpsertRecords(ctx, "Positions_Crypto_", positions, grist.UpsertOpts{}); err != nil {
 			return fmt.Errorf("error upserting balances: %v", err)
-		}
-
-		updateStatus(fmt.Sprintf("[%s] Upserting %d prices to Grist...", wallet.Label, len(prices)))
-		if err := g.UpsertRecords(ctx, "Prices", prices, grist.UpsertOpts{}); err != nil {
-			return fmt.Errorf("error upserting prices: %v", err)
 		}
 
 		updateStatus(fmt.Sprintf("[%s] ✓ Synced successfully", wallet.Label))

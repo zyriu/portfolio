@@ -15,18 +15,13 @@ interface JobState {
 
 function JobCard({ 
   job, 
-  onRefreshJobs,
-  onErrorClick,
-  isErrorAcknowledged
+  onRefreshJobs
 }: { 
   job: JobState, 
-  onRefreshJobs: () => Promise<void>,
-  onErrorClick?: (jobName: string) => void,
-  isErrorAcknowledged?: boolean
+  onRefreshJobs: () => Promise<void>
 }) {
   const [now, setNow] = useState(Date.now() / 1000);
   const [isTriggering, setIsTriggering] = useState(false);
-  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now() / 1000), 1000);
@@ -57,7 +52,6 @@ function JobCard({
     return `${s}s`;
   };
 
-
   const handleTrigger = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isTriggering) return;
@@ -72,28 +66,8 @@ function JobCard({
     }
   };
 
-  // Track error state - only show if not acknowledged
-  useEffect(() => {
-    if (job.err && !isErrorAcknowledged) {
-      setHasError(true);
-    } else {
-      setHasError(false);
-    }
-  }, [job.err, isErrorAcknowledged]);
-
-  const handleCardClick = () => {
-    // Allow click if there's any error, even if acknowledged
-    if (job.err && onErrorClick) {
-      onErrorClick(job.name);
-    }
-  };
-
   return (
-    <div 
-      className={`job-card ${hasError ? 'has-error clickable' : ''}`}
-      onClick={handleCardClick}
-      style={{ cursor: job.err ? 'pointer' : 'default' }}
-    >
+    <div className="job-card">
       <div className="job-card-header">
         <div className="job-name-and-controls">
           <h3 className="job-name">{formatJobName(job.name)}</h3>
@@ -113,10 +87,6 @@ function JobCard({
             )}
           </button>
         </div>
-        {hasError && (
-          <span className="job-error-icon" title="Job has errors - click to see details">
-          </span>
-        )}
       </div>
       
       <div className="job-progress-section">
@@ -136,14 +106,10 @@ function JobCard({
 
 export default function Dashboard({ 
   jobs, 
-  onRefreshJobs,
-  onNavigateToError,
-  acknowledgedErrors
+  onRefreshJobs
 }: { 
   jobs: JobState[], 
-  onRefreshJobs: () => Promise<void>,
-  onNavigateToError?: (jobName: string) => void,
-  acknowledgedErrors?: Set<string>
+  onRefreshJobs: () => Promise<void>
 }) {
 
   const enabledJobs = jobs.filter(job => job.running);
@@ -168,8 +134,6 @@ export default function Dashboard({
               key={job.name} 
               job={job} 
               onRefreshJobs={onRefreshJobs}
-              onErrorClick={onNavigateToError}
-              isErrorAcknowledged={acknowledgedErrors?.has(job.name)}
             />
           ))}
         </div>

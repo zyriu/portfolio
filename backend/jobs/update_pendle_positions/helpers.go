@@ -109,12 +109,14 @@ func appendOpenedPositions(wallet string, yieldPositions []grist.Upsert, missing
 		expiry := t.Format("02 Jan 2006")
 
 		if position.LP.Valuation > 0 {
+			name = strings.Replace(name, "PT", "LP", 1)
 			yieldPositions = append(yieldPositions, createRecord(c, name, expiry, asset, exposure, IY, "LP", position.LP))
 		}
 		if position.PT.Valuation > 0 {
 			yieldPositions = append(yieldPositions, createRecord(c, name, expiry, asset, exposure, IY, "PT", position.PT))
 		}
 		if position.YT.Valuation > 0 {
+			name = strings.Replace(name, "PT", "YT", 1)
 			yieldPositions = append(yieldPositions, createRecord(c, name, expiry, asset, exposure, IY, "YT", position.YT))
 		}
 	}
