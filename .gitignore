@@ -1,4 +1,4 @@
-settings.json
+coverage.*
 
 # === Environment & secrets ===
 .env

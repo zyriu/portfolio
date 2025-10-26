@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -111,10 +112,22 @@ func TestManagerGetExecutionsReturnsCopy(t *testing.T) {
 	setupTestHome(t)
 
 	m := NewManager()
-	start := time.Now()
-	end := start.Add(time.Second)
-	logs := []JobLog{{Timestamp: start.Format(time.RFC3339), Message: "log", Level: "info"}}
-	m.recordExecution("job", start, end, logs, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m.Startup(ctx)
+
+	// Create a job that will generate an execution
+	var runCount atomic.Int32
+	m.AddAndStart("test_job", 20*time.Millisecond, func(ctx context.Context, args ...any) error {
+		jobstatus.GetStatusUpdater(ctx)("running")
+		runCount.Add(1)
+		return nil
+	})
+
+	// Wait for the job to run and generate an execution
+	if !waitForCondition(t, func() bool { return runCount.Load() >= 1 }, time.Second) {
+		t.Fatalf("expected job to run at least once")
+	}
 
 	executions := m.GetExecutions()
 	if len(executions) != 1 {
@@ -194,5 +207,154 @@ func TestManagerStopAndRemoveErrorsWhenMissing(t *testing.T) {
 	err := m.StopAndRemove("missing")
 	if err == nil || !strings.Contains(err.Error(), "job \"missing\" not found") {
 		t.Fatalf("expected not found error, got %v", err)
+	}
+}
+
+func TestManagerPauseAndTrigger(t *testing.T) {
+	setupTestHome(t)
+
+	m := NewManager()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m.Startup(ctx)
+
+	// Test pause on non-existent job
+	err := m.Pause("missing")
+	if err == nil || !strings.Contains(err.Error(), "unknown job") {
+		t.Fatalf("expected unknown job error, got %v", err)
+	}
+
+	// Test trigger on non-existent job
+	err = m.Trigger("missing")
+	if err == nil || !strings.Contains(err.Error(), "unknown job") {
+		t.Fatalf("expected unknown job error, got %v", err)
+	}
+
+	// Add a job and test pause/trigger
+	var runCount atomic.Int32
+	m.AddAndStart("test_job", 100*time.Millisecond, func(ctx context.Context, args ...any) error {
+		runCount.Add(1)
+		return nil
+	})
+
+	// Wait for initial run
+	if !waitForCondition(t, func() bool { return runCount.Load() >= 1 }, time.Second) {
+		t.Fatalf("expected job to run initially")
+	}
+
+	// Test pause functionality
+	if err := m.Pause("test_job"); err != nil {
+		t.Fatalf("failed to pause job: %v", err)
+	}
+
+	// Test trigger functionality (this should work even if paused)
+	if err := m.Trigger("test_job"); err != nil {
+		t.Fatalf("failed to trigger job: %v", err)
+	}
+}
+
+func TestManagerLoadAndSaveSettings(t *testing.T) {
+	setupTestHome(t)
+
+	m := NewManager()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m.Startup(ctx)
+
+	// Test LoadSettings
+	settingsJSON, err := m.LoadSettings()
+	if err != nil {
+		t.Fatalf("failed to load settings: %v", err)
+	}
+
+	// Verify it's valid JSON
+	var settingsData map[string]interface{}
+	if err := json.Unmarshal([]byte(settingsJSON), &settingsData); err != nil {
+		t.Fatalf("settings JSON is invalid: %v", err)
+	}
+
+	// Test SaveSettings with valid JSON
+	modifiedSettings := `{"grist":{"enabled":true,"apiKey":"test","interval":300},"exchanges":{"kraken":{"enabled":true,"interval":600}}}`
+	if err := m.SaveSettings(modifiedSettings); err != nil {
+		t.Fatalf("failed to save settings: %v", err)
+	}
+
+	// Test SaveSettings with invalid JSON
+	if err := m.SaveSettings("invalid json"); err == nil {
+		t.Fatalf("expected error for invalid JSON")
+	}
+}
+
+func TestManagerCreateJobFromSettings(t *testing.T) {
+	setupTestHome(t)
+
+	m := NewManager()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m.Startup(ctx)
+
+	// Test creating a job that doesn't exist in settings
+	err := m.createJobFromSettings("unknown_job")
+	if err == nil || !strings.Contains(err.Error(), "unknown job name") {
+		t.Fatalf("expected unknown job error, got %v", err)
+	}
+
+	// Test creating a job that's disabled in settings
+	err = m.createJobFromSettings("update_kraken")
+	if err == nil || !strings.Contains(err.Error(), "kraken job is not enabled") {
+		t.Fatalf("expected disabled job error, got %v", err)
+	}
+}
+
+func TestManagerIsJobEnabledInSettings(t *testing.T) {
+	setupTestHome(t)
+
+	m := NewManager()
+
+	// Test with default settings (most jobs disabled)
+	if m.isJobEnabledInSettings("update_kraken") {
+		t.Fatalf("expected kraken job to be disabled by default")
+	}
+
+	if m.isJobEnabledInSettings("update_prices") {
+		t.Fatalf("expected prices job to be disabled by default")
+	}
+
+	// Test unknown job (should return true for safety)
+	if !m.isJobEnabledInSettings("unknown_job") {
+		t.Fatalf("expected unknown job to be enabled for safety")
+	}
+}
+
+func TestManagerSyncJobsWithSettings(t *testing.T) {
+	setupTestHome(t)
+
+	m := NewManager()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m.Startup(ctx)
+
+	// Test sync with default settings (should not create any jobs)
+	if err := m.SyncJobsWithSettings(); err != nil {
+		t.Fatalf("sync failed: %v", err)
+	}
+
+	jobs := m.Jobs()
+	if len(jobs) != 0 {
+		t.Fatalf("expected no jobs with default settings, got %d", len(jobs))
+	}
+}
+
+func TestManagerSyncJobsWithSettingsPublic(t *testing.T) {
+	setupTestHome(t)
+
+	m := NewManager()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m.Startup(ctx)
+
+	// Test the public method
+	if err := m.SyncJobsWithSettingsPublic(); err != nil {
+		t.Fatalf("public sync failed: %v", err)
 	}
 }
