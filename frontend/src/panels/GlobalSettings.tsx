@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { backendJobs, loadSettings, saveSettings } from "../backend";
+import { loadSettings, saveSettings } from "../backend";
 import { Settings, UnifiedWallet, secondsToMinutesSeconds, minutesSecondsToSeconds } from "../types";
-import { Card, Row, Field, Input, Switch, Button } from "../components/common";
+import { Card, Input, Switch, Button } from "../components/common";
 
 export default function GlobalSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -143,7 +143,7 @@ export default function GlobalSettings() {
       }
       updated.exchanges.kraken.enabled = enabled;
       setShowKrakenMessage(false); // Hide message when successfully toggling
-    } else if (section === 'onchain' && (subsection === 'evm' || subsection === 'nonEvm')) {
+    } else if (section === 'onchain' && (subsection === 'evm' || subsection === 'bitcoin' || subsection === 'solana')) {
       // Don't allow enabling EVM/Non-EVM balance jobs if CoinStats API key is empty
       if (enabled) {
         const apiKey = updated.onchain.coinstatsApiKey.trim();
@@ -579,8 +579,8 @@ export default function GlobalSettings() {
                 alignItems: 'center'
               }}>
                 <Switch 
-                  checked={settings.onchain.nonEvm.enabled} 
-                  onChange={v => toggleEnabled('onchain', 'nonEvm', v)}
+                  checked={settings.onchain.bitcoin.enabled} 
+                  onChange={v => toggleEnabled('onchain', 'bitcoin', v)}
                 />
               </div>
             </div>
@@ -590,8 +590,8 @@ export default function GlobalSettings() {
                 <Input
                   type="number"
                   min={0}
-                  value={secondsToMinutesSeconds(settings.onchain.nonEvm.interval).minutes}
-                  onChange={e => updateInterval('onchain', 'nonEvm', minutesSecondsToSeconds(Number(e.target.value), secondsToMinutesSeconds(settings.onchain.nonEvm.interval).seconds))}
+                  value={secondsToMinutesSeconds(settings.onchain.bitcoin.interval).minutes}
+                  onChange={e => updateInterval('onchain', 'bitcoin', minutesSecondsToSeconds(Number(e.target.value), secondsToMinutesSeconds(settings.onchain.bitcoin.interval).seconds))}
                   style={{ width: '60px' }}
                   placeholder="min"
                 />
@@ -600,8 +600,8 @@ export default function GlobalSettings() {
                   type="number"
                   min={0}
                   max={59}
-                  value={secondsToMinutesSeconds(settings.onchain.nonEvm.interval).seconds}
-                  onChange={e => updateInterval('onchain', 'nonEvm', minutesSecondsToSeconds(secondsToMinutesSeconds(settings.onchain.nonEvm.interval).minutes, Number(e.target.value)))}
+                  value={secondsToMinutesSeconds(settings.onchain.bitcoin.interval).seconds}
+                  onChange={e => updateInterval('onchain', 'bitcoin', minutesSecondsToSeconds(secondsToMinutesSeconds(settings.onchain.bitcoin.interval).minutes, Number(e.target.value)))}
                   style={{ width: '60px' }}
                   placeholder="sec"
                 />

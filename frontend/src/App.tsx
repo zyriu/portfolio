@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Layout, Section } from "./components/Menu";
-import Dashboard from "./panels/Dashboard";
+import Jobs from "./panels/Jobs";
 import Logs from "./panels/Logs";
 import { backendJobs } from "./backend";
 import { JobExecutionProvider, useJobExecution } from "./contexts/JobExecutionContext";
@@ -17,7 +17,7 @@ interface JobState {
 }
 
 function AppContent() {
-  const [section, setSection] = useState<Section>("dashboard");
+  const [section, setSection] = useState<Section>("jobs");
   const [jobs, setJobs] = useState<JobState[]>([]);
   const { setExecutions } = useJobExecution();
 
@@ -66,8 +66,8 @@ function AppContent() {
 
   return (
     <Layout section={section} setSection={setSection}>
-      {section === "dashboard" && (
-        <Dashboard 
+      {section === "jobs" && (
+        <Jobs 
           jobs={jobs} 
           onRefreshJobs={fetchJobs}
         />

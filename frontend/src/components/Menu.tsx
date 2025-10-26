@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import GlobalSettings from "../panels/GlobalSettings";
 
-export type Section = "dashboard" | "logs" | "settings";
+export type Section = "jobs" | "logs" | "settings";
 
 function getSectionTitle(section: Section): string {
   switch (section) {
-    case "dashboard": return "Dashboard";
+    case "jobs": return "Jobs";
     case "logs": return "Logs";
     case "settings": return "Settings";
     default: return "Portfolio Manager";
@@ -84,9 +84,9 @@ export function Layout({
           <nav className="menu-drawer menu-drawer-left">
             <div className="menu-header">Navigation</div>
             <MenuItem 
-              label="Dashboard" 
-              active={section === "dashboard"} 
-              onClick={() => navigateTo("dashboard")} 
+              label="Jobs" 
+              active={section === "jobs"} 
+              onClick={() => navigateTo("jobs")} 
             />
             <MenuItem 
               label="Logs" 

@@ -26,7 +26,7 @@ export type Settings = {
   onchain: {
     coinstatsApiKey: string;
     evm: { enabled: boolean; interval: number };
-    nonEvm: { enabled: boolean; interval: number };
+    bitcoin: { enabled: boolean; interval: number };
     solana: { enabled: boolean; interval: number };
   };
 
@@ -62,7 +62,8 @@ export const defaultSettings: Settings = {
   onchain: {
     coinstatsApiKey: "",
     evm: { enabled: false, interval: 1800 }, // 30 minutes
-    nonEvm: { enabled: false, interval: 10800 }, // 3 hours
+    bitcoin: { enabled: false, interval: 10800 }, // 3 hours
+    solana: { enabled: false, interval: 10800 }, // 3 hours
   },
 
   grist: {

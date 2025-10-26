@@ -301,13 +301,12 @@ input[type="number"] {
     -moz-appearance: textfield;
 }
 
-/* Dashboard */
-.dashboard {
+.jobs {
     max-width: 1400px;
     margin: 0 auto;
 }
 
-.dashboard-title {
+.jobs-title {
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-primary);
@@ -470,6 +469,26 @@ input[type="number"] {
 .job-execution-item.selected {
     border-color: var(--accent-primary);
     background: var(--bg-hover);
+}
+
+.job-execution-item.executing {
+    border-color: var(--warning);
+    background: rgba(245, 158, 11, 0.05);
+    position: relative;
+}
+
+.job-execution-item.executing::before {
+    content: "⚡ Executing - Logs disabled";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--warning);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    z-index: 1;
 }
 
 .execution-header {

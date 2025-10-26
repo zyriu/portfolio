@@ -44,10 +44,10 @@ type Settings struct {
 			Enabled  bool `json:"enabled"`
 			Interval int  `json:"interval"`
 		} `json:"evm"`
-		NonEVM struct {
+		Bitcoin struct {
 			Enabled  bool `json:"enabled"`
 			Interval int  `json:"interval"`
-		} `json:"nonEvm"`
+		} `json:"bitcoin"`
 		Solana struct {
 			Enabled  bool `json:"enabled"`
 			Interval int  `json:"interval"`
@@ -146,8 +146,8 @@ func GetDefaultSettings() Settings {
 	settings.OnChain.EVM.Enabled = false
 	settings.OnChain.EVM.Interval = 1800 // 30 minutes
 
-	settings.OnChain.NonEVM.Enabled = false
-	settings.OnChain.NonEVM.Interval = 10800 // 3 hours
+	settings.OnChain.Bitcoin.Enabled = false
+	settings.OnChain.Bitcoin.Interval = 10800 // 3 hours
 
 	settings.OnChain.Solana.Enabled = false
 	settings.OnChain.Solana.Interval = 1800 // 30 minutes

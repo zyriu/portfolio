@@ -332,7 +332,7 @@ func (m *Manager) createJobFromSettingsWithLastRun(name string, lastRun time.Tim
 		}
 		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.EVM.Interval)*time.Second, update_evm_balances.Run, lastRun)
 	case "update_bitcoin_balances":
-		if !settingsData.OnChain.NonEVM.Enabled {
+		if !settingsData.OnChain.Bitcoin.Enabled {
 			return fmt.Errorf("bitcoin job is not enabled in settings")
 		}
 		// Check if there are any bitcoin wallets
@@ -347,9 +347,9 @@ func (m *Manager) createJobFromSettingsWithLastRun(name string, lastRun time.Tim
 		if !hasBitcoinWallet {
 			return fmt.Errorf("no bitcoin wallets configured")
 		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.NonEVM.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "bitcoin")
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.Bitcoin.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "bitcoin")
 	case "update_solana_balances":
-		if !settingsData.OnChain.NonEVM.Enabled {
+		if !settingsData.OnChain.Solana.Enabled {
 			return fmt.Errorf("solana job is not enabled in settings")
 		}
 		// Check if there are any solana wallets
@@ -364,7 +364,7 @@ func (m *Manager) createJobFromSettingsWithLastRun(name string, lastRun time.Tim
 		if !hasSolanaWallet {
 			return fmt.Errorf("no solana wallets configured")
 		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.NonEVM.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "solana")
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.Solana.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "solana")
 	case "update_prices":
 		if !settingsData.Settings.Prices.Enabled {
 			return fmt.Errorf("prices job is not enabled in settings")
@@ -412,7 +412,7 @@ func (m *Manager) isJobEnabledInSettings(jobName string) bool {
 	case "update_evm_balances":
 		return settingsData.OnChain.EVM.Enabled
 	case "update_bitcoin_balances":
-		if !settingsData.OnChain.NonEVM.Enabled {
+		if !settingsData.OnChain.Bitcoin.Enabled {
 			return false
 		}
 		// Check if there are any bitcoin wallets
@@ -424,7 +424,7 @@ func (m *Manager) isJobEnabledInSettings(jobName string) bool {
 		}
 		return false
 	case "update_solana_balances":
-		if !settingsData.OnChain.NonEVM.Enabled {
+		if !settingsData.OnChain.Solana.Enabled {
 			return false
 		}
 		// Check if there are any solana wallets
