@@ -97,7 +97,7 @@ function JobCard({
           />
         </div>
         <div className="job-timer">
-          {formatTime(timeUntilNext)}
+          {isActivelyRunning ? "(0s)" : formatTime(timeUntilNext)}
         </div>
       </div>
     </div>

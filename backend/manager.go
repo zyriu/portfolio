@@ -65,13 +65,36 @@ func (m *Manager) AddAndStart(name string, interval time.Duration, fn JobRunnerF
 func (m *Manager) AddAndStartWithLastRun(name string, interval time.Duration, fn JobRunnerFunc, lastRun time.Time, args ...any) {
 	j := newJobController(name, interval, fn, args...)
 
-	// Set the completion callback to track executions
+	// Set the callbacks to track executions
 	j.onCompleteCallback = m.recordExecution
+	j.onStartCallback = m.recordExecutionStart
 
 	m.mu.Lock()
 	m.jobs[name] = j
 	m.mu.Unlock()
 	j.StartWithLastRun(m.ctx, lastRun)
+}
+
+// recordExecutionStart creates a running job execution entry
+func (m *Manager) recordExecutionStart(jobName string, startTime time.Time) {
+	execution := JobExecution{
+		ID:        fmt.Sprintf("%s-%d", jobName, startTime.Unix()),
+		JobName:   jobName,
+		StartTime: startTime.Format(time.RFC3339),
+		Status:    "running",
+		Logs:      []JobLog{},
+	}
+
+	m.executionsMu.Lock()
+	defer m.executionsMu.Unlock()
+
+	// Add to the front of the list
+	m.executions = append([]JobExecution{execution}, m.executions...)
+
+	// Trim to max executions
+	if len(m.executions) > m.maxExecutions {
+		m.executions = m.executions[:m.maxExecutions]
+	}
 }
 
 // recordExecution stores a completed job execution in history
@@ -89,24 +112,20 @@ func (m *Manager) recordExecution(jobName string, startTime, endTime time.Time, 
 		logsCopy = logsCopy[len(logsCopy)-127:]
 	}
 
-	execution := JobExecution{
-		ID:        fmt.Sprintf("%s-%d", jobName, startTime.Unix()),
-		JobName:   jobName,
-		StartTime: startTime.Format(time.RFC3339),
-		EndTime:   endTime.Format(time.RFC3339),
-		Status:    status,
-		Logs:      logsCopy,
-	}
+	executionID := fmt.Sprintf("%s-%d", jobName, startTime.Unix())
 
 	m.executionsMu.Lock()
 	defer m.executionsMu.Unlock()
 
-	// Add to the front of the list
-	m.executions = append([]JobExecution{execution}, m.executions...)
-
-	// Trim to max executions
-	if len(m.executions) > m.maxExecutions {
-		m.executions = m.executions[:m.maxExecutions]
+	// Find and update the existing running execution
+	for i, exec := range m.executions {
+		if exec.ID == executionID && exec.Status == "running" {
+			// Update the existing execution
+			m.executions[i].EndTime = endTime.Format(time.RFC3339)
+			m.executions[i].Status = status
+			m.executions[i].Logs = logsCopy
+			break
+		}
 	}
 
 	// Store execution time in Grist (async to avoid blocking)
@@ -169,6 +188,9 @@ func (m *Manager) Resume(name string) error {
 		if err != nil {
 			return err
 		}
+		// Set callbacks for the newly created job
+		j.onCompleteCallback = m.recordExecution
+		j.onStartCallback = m.recordExecutionStart
 	}
 	j.Resume()
 	m.emit("job_resumed", map[string]any{"name": name})
@@ -187,6 +209,9 @@ func (m *Manager) SetInterval(name string, interval int64) error {
 		if err != nil {
 			return err
 		}
+		// Set callbacks for the newly created job
+		j.onCompleteCallback = m.recordExecution
+		j.onStartCallback = m.recordExecutionStart
 	}
 
 	if interval < 5 {

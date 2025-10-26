@@ -12,6 +12,7 @@ import (
 type JobRunnerFunc func(ctx context.Context, args ...any) error
 
 type ExecutionCompleteCallback func(jobName string, startTime, endTime time.Time, logs []JobLog, err error)
+type ExecutionStartCallback func(jobName string, startTime time.Time)
 
 type jobController struct {
 	name string
@@ -39,6 +40,7 @@ type jobController struct {
 	logBuffer          []JobLog
 	currentStatus      string // Keep for backwards compatibility
 	onCompleteCallback ExecutionCompleteCallback
+	onStartCallback    ExecutionStartCallback
 }
 
 type JobState struct {
@@ -127,34 +129,41 @@ func (j *jobController) loop() {
 		j.runOnce()
 	}
 
-	timer := time.NewTimer(initialDuration)
-	defer timer.Stop()
+	// Use time.After for more precise timing
+	var timer <-chan time.Time
+	if initialDuration > 0 {
+		timer = time.After(initialDuration)
+	} else {
+		// If initial duration is 0, create a channel that's already ready
+		ch := make(chan time.Time, 1)
+		ch <- time.Now()
+		timer = ch
+	}
 
 	for {
-		var next time.Duration
-		j.mu.RLock()
-		if j.paused {
-			next = time.Hour * 24 * 365 * 100 // effectively never
-		} else {
-			next = j.interval
-		}
-		j.mu.RUnlock()
-
-		if !timer.Stop() {
-			select {
-			case <-timer.C:
-			default:
-			}
-		}
-		timer.Reset(next)
-
 		select {
 		case <-j.ctx.Done():
 			return
-		case <-timer.C:
+		case <-timer:
+			// Timer expired - run immediately
 			j.runOnce()
+			// Restart timer after job completion
+			j.mu.RLock()
+			nextInterval := j.interval
+			j.mu.RUnlock()
+			if nextInterval > 0 {
+				timer = time.After(nextInterval)
+			}
 		case <-j.triggerCh:
+			// Manual trigger - run immediately
 			j.runOnce()
+			// Restart timer after job completion
+			j.mu.RLock()
+			nextInterval := j.interval
+			j.mu.RUnlock()
+			if nextInterval > 0 {
+				timer = time.After(nextInterval)
+			}
 		case newInterval := <-j.updateCh:
 			// Handle interval update intelligently
 			j.mu.Lock()
@@ -163,25 +172,19 @@ func (j *jobController) loop() {
 			// Calculate elapsed time since last run
 			elapsed := time.Since(j.lastRun)
 
-			// Drain the timer first
-			if !timer.Stop() {
-				select {
-				case <-timer.C:
-				default:
-				}
-			}
-
 			// If the new interval is less than elapsed time, trigger immediately
 			if newInterval <= elapsed {
-				// Set timer to expire immediately (1 nanosecond)
-				timer.Reset(1 * time.Nanosecond)
+				// Set timer to expire immediately
+				ch := make(chan time.Time, 1)
+				ch <- time.Now()
+				timer = ch
 				j.mu.Unlock()
 			} else {
 				// New interval is greater than elapsed time
 				// Set timer to remaining time: newInterval - elapsed
 				remaining := newInterval - elapsed
 				j.nextRun = j.lastRun.Add(newInterval)
-				timer.Reset(remaining)
+				timer = time.After(remaining)
 				j.mu.Unlock()
 			}
 			continue // Skip the normal timer reset at the top of the loop
@@ -243,7 +246,13 @@ func (j *jobController) runOnce() {
 	j.nextRun = time.Now().Add(j.interval)
 	// Clear log buffer at the start of each run
 	j.logBuffer = []JobLog{}
+	startCallback := j.onStartCallback
 	j.mu.Unlock()
+
+	// Call the start callback if set
+	if startCallback != nil {
+		startCallback(j.name, startTime)
+	}
 
 	// Create context with status updater
 	ctx := jobstatus.WithStatusUpdater(j.ctx, j.updateStatus)
@@ -306,12 +315,21 @@ func (j *jobController) State() JobState {
 	logsCopy := make([]JobLog, len(j.logBuffer))
 	copy(logsCopy, j.logBuffer)
 
+	// Calculate next run time
+	var nextRunUnix int64
+	if j.isExecuting {
+		// If job is executing, next run is after current execution completes
+		nextRunUnix = time.Now().Add(j.interval).Unix()
+	} else {
+		nextRunUnix = j.nextRun.Unix()
+	}
+
 	return JobState{
 		Name:          j.name,
 		Interval:      j.interval.Milliseconds() / 1000,
 		Running:       !j.paused,
 		LastRunUnix:   j.lastRun.Unix(),
-		NextRunUnix:   j.nextRun.Unix(),
+		NextRunUnix:   nextRunUnix,
 		Err:           errStr,
 		IsExecuting:   j.isExecuting,
 		CurrentStatus: j.currentStatus,

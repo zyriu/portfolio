@@ -21,7 +21,7 @@ func main() {
 
 	app := &options.App{
 		Title:  "Portfolio",
-		Width:  1600,
+		Width:  1400,
 		Height: 900,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
