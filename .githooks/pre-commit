@@ -1,0 +1,9 @@
+#!/bin/sh
+# Pre-commit hook to ensure Go tests pass before committing
+set -eu
+
+printf 'Running go test...\n'
+if ! go test ./...; then
+  printf '\nGo tests failed. Commit aborted.\n' >&2
+  exit 1
+fi

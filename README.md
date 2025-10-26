@@ -435,6 +435,18 @@ portfolio/
 4. Add configuration fields to `backend/helpers/settings/settings.go`
 5. Add UI controls in `frontend/src/panels/GlobalSettings.tsx`
 
+### Local Git Hooks
+
+To ensure commits always include passing tests, the repository provides a pre-commit hook in `.githooks/pre-commit` that runs `go test ./...`.
+
+Enable it in your local clone with:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Git will now execute the hook automatically before each commit.
+
 ## Contributing
 
 Contributions are welcome! Please:

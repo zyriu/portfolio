@@ -30,4 +30,5 @@ persist/
 
 # === Wails ===
 node_modules
-frontend/dist
+frontend/dist/*
+!frontend/dist/.keep
