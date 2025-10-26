@@ -68,6 +68,10 @@ func newJobController(name string, interval time.Duration, fn JobRunnerFunc, arg
 }
 
 func (j *jobController) Start(parent context.Context) {
+	j.StartWithLastRun(parent, time.Time{})
+}
+
+func (j *jobController) StartWithLastRun(parent context.Context, lastRun time.Time) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	if j.started {
@@ -75,15 +79,55 @@ func (j *jobController) Start(parent context.Context) {
 	}
 	j.ctx, j.cancel = context.WithCancel(parent)
 	j.started = true
+	j.lastRun = lastRun
+
+	// Calculate next run time based on last run and interval
+	if !lastRun.IsZero() {
+		j.nextRun = lastRun.Add(j.interval)
+	} else {
+		j.nextRun = time.Now().Add(j.interval)
+	}
 
 	go j.loop()
 }
 
 func (j *jobController) loop() {
-	// Run immediately on startup
-	j.runOnce()
+	// Run immediately on startup only if no lastRun time is set
+	j.mu.RLock()
+	hasLastRun := !j.lastRun.IsZero()
+	j.mu.RUnlock()
 
-	timer := time.NewTimer(j.interval)
+	if !hasLastRun {
+		j.runOnce()
+	}
+
+	// Calculate initial timer duration
+	var initialDuration time.Duration
+	var shouldRunImmediately bool
+	j.mu.RLock()
+	if j.paused {
+		initialDuration = time.Hour * 24 * 365 * 100 // effectively never
+	} else if hasLastRun {
+		// Calculate time until next run based on lastRun + interval
+		timeUntilNext := time.Until(j.nextRun)
+		if timeUntilNext <= 0 {
+			// Next run time has already passed, run immediately
+			shouldRunImmediately = true
+			initialDuration = 0
+		} else {
+			initialDuration = timeUntilNext
+		}
+	} else {
+		initialDuration = j.interval
+	}
+	j.mu.RUnlock()
+
+	// Run immediately if next run time has already passed
+	if shouldRunImmediately {
+		j.runOnce()
+	}
+
+	timer := time.NewTimer(initialDuration)
 	defer timer.Stop()
 
 	for {

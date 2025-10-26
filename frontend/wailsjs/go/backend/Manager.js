@@ -6,6 +6,10 @@ export function AddAndStart(arg1, arg2, arg3, arg4) {
   return window['go']['backend']['Manager']['AddAndStart'](arg1, arg2, arg3, arg4);
 }
 
+export function AddAndStartWithLastRun(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['backend']['Manager']['AddAndStartWithLastRun'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function GetExecutions() {
   return window['go']['backend']['Manager']['GetExecutions']();
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/zyriu/portfolio/backend/helpers/grist"
 	"github.com/zyriu/portfolio/backend/helpers/settings"
 	"github.com/zyriu/portfolio/backend/jobs/backup_grist"
 	"github.com/zyriu/portfolio/backend/jobs/update_evm_balances"
@@ -58,6 +59,10 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) AddAndStart(name string, interval time.Duration, fn JobRunnerFunc, args ...any) {
+	m.AddAndStartWithLastRun(name, interval, fn, time.Time{}, args...)
+}
+
+func (m *Manager) AddAndStartWithLastRun(name string, interval time.Duration, fn JobRunnerFunc, lastRun time.Time, args ...any) {
 	j := newJobController(name, interval, fn, args...)
 
 	// Set the completion callback to track executions
@@ -66,7 +71,7 @@ func (m *Manager) AddAndStart(name string, interval time.Duration, fn JobRunnerF
 	m.mu.Lock()
 	m.jobs[name] = j
 	m.mu.Unlock()
-	j.Start(m.ctx)
+	j.StartWithLastRun(m.ctx, lastRun)
 }
 
 // recordExecution stores a completed job execution in history
@@ -103,6 +108,13 @@ func (m *Manager) recordExecution(jobName string, startTime, endTime time.Time, 
 	if len(m.executions) > m.maxExecutions {
 		m.executions = m.executions[:m.maxExecutions]
 	}
+
+	// Store execution time in Grist (async to avoid blocking)
+	go func() {
+		if err := m.storeExecutionTimeInGrist(jobName, endTime); err != nil {
+			fmt.Printf("Warning: Failed to store execution time for job %q in Grist: %v\n", jobName, err)
+		}
+	}()
 }
 
 func (m *Manager) emit(event string, payload any) {
@@ -258,6 +270,11 @@ func (m *Manager) SaveSettings(settingsJSON string) error {
 
 // createJobFromSettings creates a job based on current settings
 func (m *Manager) createJobFromSettings(name string) error {
+	return m.createJobFromSettingsWithLastRun(name, time.Time{})
+}
+
+// createJobFromSettingsWithLastRun creates a job based on current settings with a specific last run time
+func (m *Manager) createJobFromSettingsWithLastRun(name string, lastRun time.Time) error {
 	settingsData, err := settings.LoadSettings()
 	if err != nil {
 		return fmt.Errorf("failed to load settings: %v", err)
@@ -268,27 +285,27 @@ func (m *Manager) createJobFromSettings(name string) error {
 		if !settingsData.Grist.Enabled {
 			return fmt.Errorf("grist job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Grist.Interval)*time.Second, backup_grist.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Grist.Interval)*time.Second, backup_grist.Run, lastRun)
 	case "update_kraken":
 		if !settingsData.Exchanges.Kraken.Enabled {
 			return fmt.Errorf("kraken job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Exchanges.Kraken.Interval)*time.Second, update_kraken.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Kraken.Interval)*time.Second, update_kraken.Run, lastRun)
 	case "update_hyperliquid":
 		if !settingsData.Exchanges.Hyperliquid.Enabled {
 			return fmt.Errorf("hyperliquid job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Exchanges.Hyperliquid.Interval)*time.Second, update_hyperliquid.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Hyperliquid.Interval)*time.Second, update_hyperliquid.Run, lastRun)
 	case "update_lighter":
 		if !settingsData.Exchanges.Lighter.Enabled {
 			return fmt.Errorf("lighter job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Exchanges.Lighter.Interval)*time.Second, update_lighter.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Lighter.Interval)*time.Second, update_lighter.Run, lastRun)
 	case "update_evm_balances":
 		if !settingsData.OnChain.EVM.Enabled {
 			return fmt.Errorf("evm job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.OnChain.EVM.Interval)*time.Second, update_evm_balances.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.EVM.Interval)*time.Second, update_evm_balances.Run, lastRun)
 	case "update_bitcoin_balances":
 		if !settingsData.OnChain.NonEVM.Enabled {
 			return fmt.Errorf("bitcoin job is not enabled in settings")
@@ -305,7 +322,7 @@ func (m *Manager) createJobFromSettings(name string) error {
 		if !hasBitcoinWallet {
 			return fmt.Errorf("no bitcoin wallets configured")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.OnChain.NonEVM.Interval)*time.Second, update_non_evm_balances.Run, "bitcoin")
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.NonEVM.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "bitcoin")
 	case "update_solana_balances":
 		if !settingsData.OnChain.NonEVM.Enabled {
 			return fmt.Errorf("solana job is not enabled in settings")
@@ -322,27 +339,27 @@ func (m *Manager) createJobFromSettings(name string) error {
 		if !hasSolanaWallet {
 			return fmt.Errorf("no solana wallets configured")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.OnChain.NonEVM.Interval)*time.Second, update_non_evm_balances.Run, "solana")
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.NonEVM.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "solana")
 	case "update_prices":
 		if !settingsData.Settings.Prices.Enabled {
 			return fmt.Errorf("prices job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Settings.Prices.Interval)*time.Second, update_prices.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Settings.Prices.Interval)*time.Second, update_prices.Run, lastRun)
 	case "update_stocks":
 		if !settingsData.Settings.Stocks.Enabled {
 			return fmt.Errorf("stocks job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Settings.Stocks.Interval)*time.Second, update_stocks.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Settings.Stocks.Interval)*time.Second, update_stocks.Run, lastRun)
 	case "update_pendle":
 		if !settingsData.Pendle.Markets.Enabled {
 			return fmt.Errorf("pendle markets job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Pendle.Markets.Interval)*time.Second, update_pendle.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Pendle.Markets.Interval)*time.Second, update_pendle.Run, lastRun)
 	case "update_pendle_positions":
 		if !settingsData.Pendle.Positions.Enabled {
 			return fmt.Errorf("pendle positions job is not enabled in settings")
 		}
-		m.AddAndStart(name, time.Duration(settingsData.Pendle.Positions.Interval)*time.Second, update_pendle_positions.Run)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Pendle.Positions.Interval)*time.Second, update_pendle_positions.Run, lastRun)
 	default:
 		return fmt.Errorf("unknown job name: %s", name)
 	}
@@ -414,6 +431,13 @@ func (m *Manager) SyncJobsWithSettings() error {
 		return fmt.Errorf("failed to load settings: %v", err)
 	}
 
+	// Fetch latest execution times from Grist
+	executionTimes, err := m.getLatestExecutionTimes()
+	if err != nil {
+		// If we can't fetch from Grist, continue without lastRun times (jobs will start immediately)
+		fmt.Printf("Warning: Could not fetch execution times from Grist: %v\n", err)
+	}
+
 	// Get list of all possible job names
 	allJobNames := []string{
 		"backup_grist",
@@ -451,14 +475,54 @@ func (m *Manager) SyncJobsWithSettings() error {
 			m.mu.RUnlock()
 
 			if !exists {
-				// Job is enabled but not running, create it
-				if err := m.createJobFromSettings(jobName); err != nil {
+				// Job is enabled but not running, create it with lastRun time if available
+				lastRun := time.Time{}
+				if executionTimes != nil {
+					if lastRunTime, exists := executionTimes[jobName]; exists {
+						lastRun = lastRunTime
+					}
+				}
+
+				if err := m.createJobFromSettingsWithLastRun(jobName, lastRun); err != nil {
 					// If job can't be created (e.g., missing config), that's okay
 					// Just log it and continue
 					fmt.Printf("Warning: Could not create job %q: %v\n", jobName, err)
 				}
 			}
 		}
+	}
+
+	return nil
+}
+
+// getLatestExecutionTimes fetches the latest execution times from Grist
+func (m *Manager) getLatestExecutionTimes() (map[string]time.Time, error) {
+	// Initialize Grist client
+	g, err := grist.InitiateClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Grist client: %v", err)
+	}
+
+	// Fetch execution times from Grist
+	executionTimes, err := g.GetLatestExecutionTimes(m.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch execution times from Grist: %v", err)
+	}
+
+	return executionTimes, nil
+}
+
+// storeExecutionTimeInGrist stores a job execution time in Grist
+func (m *Manager) storeExecutionTimeInGrist(jobName string, executionTime time.Time) error {
+	// Initialize Grist client
+	g, err := grist.InitiateClient()
+	if err != nil {
+		return fmt.Errorf("failed to initialize Grist client: %v", err)
+	}
+
+	// Store execution time in Grist
+	if err := g.StoreJobExecutionTime(m.ctx, jobName, executionTime); err != nil {
+		return fmt.Errorf("failed to store execution time in Grist: %v", err)
 	}
 
 	return nil

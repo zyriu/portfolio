@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/zyriu/portfolio/backend/helpers/chain"
 	"github.com/zyriu/portfolio/backend/helpers/misc"
@@ -333,4 +334,49 @@ func (g *Grist) UpsertRecords(ctx context.Context, table string, records []Upser
 	}
 
 	return nil
+}
+
+func (g *Grist) GetLatestExecutionTimes(ctx context.Context) (map[string]time.Time, error) {
+	executionTimes := make(map[string]time.Time)
+
+	resp, err := g.GetRecords(ctx, "DATA_", "filter={\"Type\":[\"job_execution_time\"]}")
+	if err != nil {
+		return executionTimes, fmt.Errorf("grist.GetLatestExecutionTimes: %s", err)
+	}
+
+	for _, rec := range resp.Records {
+		b, err := json.Marshal(rec.Fields)
+		if err != nil {
+			return executionTimes, err
+		}
+
+		var jobExecutionTime struct {
+			JobName string `json:"Key"`
+			LastRun string `json:"Value"`
+		}
+		if err := json.Unmarshal(b, &jobExecutionTime); err != nil {
+			return nil, err
+		}
+
+		if lastRun, err := time.Parse(time.RFC3339, jobExecutionTime.LastRun); err == nil {
+			executionTimes[jobExecutionTime.JobName] = lastRun
+		}
+	}
+
+	return executionTimes, nil
+}
+
+// StoreJobExecutionTime stores a job execution time in the DATA_ table
+func (g *Grist) StoreJobExecutionTime(ctx context.Context, jobName string, executionTime time.Time) error {
+	upsert := Upsert{
+		Require: map[string]any{
+			"Type": "job_execution_time",
+			"Key":  jobName,
+		},
+		Fields: map[string]any{
+			"Value": executionTime.Format(time.RFC3339),
+		},
+	}
+
+	return g.UpsertRecords(ctx, "DATA_", []Upsert{upsert}, UpsertOpts{})
 }
