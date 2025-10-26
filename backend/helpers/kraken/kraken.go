@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -46,7 +45,7 @@ func (k *Kraken) GetBalances(ctx context.Context) (map[string]string, error) {
 	}
 
 	if len(balances.Error) > 0 {
-		return nil, io.EOF
+		return nil, fmt.Errorf("kraken API error: %v", balances.Error)
 	}
 
 	return balances.Result, nil

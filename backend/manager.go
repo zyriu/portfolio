@@ -80,6 +80,10 @@ func (m *Manager) recordExecution(jobName string, startTime, endTime time.Time, 
 	logsCopy := make([]JobLog, len(logs))
 	copy(logsCopy, logs)
 
+	if len(logsCopy) > 127 {
+		logsCopy = logsCopy[len(logsCopy)-127:]
+	}
+
 	execution := JobExecution{
 		ID:        fmt.Sprintf("%s-%d", jobName, startTime.Unix()),
 		JobName:   jobName,
