@@ -92,11 +92,9 @@ func processTrades(trades []kraken.Trade, k kraken.Kraken) []grist.Trade {
 		size, _ := strconv.ParseFloat(t.Vol, 64)
 
 		fee, _ := strconv.ParseFloat(t.Fee, 64)
-		var feeUSD float64
-		if token.IsStablecoin(quote) {
-			feeUSD = fee
-		} else {
-			feeUSD = fee * price
+		feeUSD := fee
+		if !token.IsStablecoin(quote) {
+			feeUSD *= price
 		}
 
 		orderType := "Market"
@@ -132,57 +130,3 @@ func processTrades(trades []kraken.Trade, k kraken.Kraken) []grist.Trade {
 
 	return processedTrades
 }
-
-/*
-func processTradesHistory(trades kraken.TradesHistory, k kraken.Kraken) ([]grist.Trade, error) {
-	tradesSlice := make([]grist.Trade, 0, len(trades.Result.Trades))
-
-	for tradeID, trade := range trades.Result.Trades {
-		price, err := strconv.ParseFloat(trade.Price, 64)
-		if err != nil {
-			return tradesSlice, fmt.Errorf("parse price for trade %s: %w", tradeID, err)
-		}
-
-		size, err := strconv.ParseFloat(trade.Vol, 64)
-		if err != nil {
-			return tradesSlice, fmt.Errorf("parse volume for trade %s: %w", tradeID, err)
-		}
-
-		direction := misc.Capitalize(trade.Type)
-		base, quote := k.GetBaseAndQuote(trade.Pair)
-		orderType := "Market"
-		if trade.Maker {
-			orderType = "Limit"
-		}
-
-		fee, err := strconv.ParseFloat(trade.Fee, 64)
-		if err != nil {
-			return tradesSlice, fmt.Errorf("parse fee for trade %s: %w", tradeID, err)
-		}
-
-		var feeUSD float64
-		if token.IsStablecoin(quote) {
-			feeUSD = fee
-		} else {
-			feeUSD = 0 // TODO get historical price and compute fee usd
-		}
-
-		tradesSlice = append(tradesSlice, grist.Trade{
-			Ticker:      base,
-			TradeID:     tradeID,
-			Time:        int64(trade.Time * 1000),
-			Exchange:    "Kraken",
-			Direction:   direction,
-			Fee:         fee,
-			FeeCurrency: quote,
-			FeeUSD:      feeUSD,
-			OrderValue:  price * size,
-			OrderType:   orderType,
-			OrderSize:   size,
-			Market:      "Spot",
-			Price:       price,
-		})
-	}
-
-	return tradesSlice, nil
-}*/

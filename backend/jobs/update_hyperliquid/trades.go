@@ -34,10 +34,62 @@ func bookTrade(book *grist.Book, trade grist.Trade) grist.Trade {
 	return trade
 }
 
-func processFills(ctx context.Context, h hyperliquid.Hyperliquid, g grist.Grist, userFills []hyperliquid.UserFill) ([]grist.Trade, error) {
+func processFills(h hyperliquid.Hyperliquid, userFills []hyperliquid.UserFill) ([]grist.Trade, error) {
 	tradesSlice := make([]grist.Trade, 0, len(userFills))
 
+	type aggKey struct {
+		Coin    string
+		TimeMin int64
+		Side    string
+		Price   string
+	}
+	type aggEntry struct {
+		fill  *hyperliquid.UserFill
+		count int
+	}
+	aggMap := make(map[aggKey]*aggEntry)
+
 	for _, f := range userFills {
+		timeMin := f.Time / 60000 // Convert milliseconds to minutes
+		key := aggKey{
+			Coin:    f.Coin,
+			TimeMin: timeMin,
+			Side:    f.Side,
+			Price:   f.Px,
+		}
+		entry, exists := aggMap[key]
+		if !exists {
+			cp := f
+			aggMap[key] = &aggEntry{
+				fill:  &cp,
+				count: 1,
+			}
+			continue
+		}
+
+		parseF := func(s string) float64 {
+			val, _ := strconv.ParseFloat(s, 64)
+			return val
+		}
+		formatF := func(f float64) string {
+			return fmt.Sprintf("%.12g", f)
+		}
+
+		// Aggregate size and fee
+		entry.fill.Sz = formatF(parseF(entry.fill.Sz) + parseF(f.Sz))
+		entry.fill.Fee = formatF(parseF(entry.fill.Fee) + parseF(f.Fee))
+		entry.count++
+
+		// Keep the earliest trade ID and time
+		if f.Time < entry.fill.Time {
+			entry.fill.Tid = f.Tid
+			entry.fill.Time = f.Time
+		}
+	}
+
+	// Process aggregated fills
+	for _, entry := range aggMap {
+		f := entry.fill
 		price, err := strconv.ParseFloat(f.Px, 64)
 		if err != nil {
 			return tradesSlice, err
@@ -59,35 +111,30 @@ func processFills(ctx context.Context, h hyperliquid.Hyperliquid, g grist.Grist,
 		}
 
 		base := h.NormalizeTicker(f.Coin)
+
 		feeCurrency := h.NormalizeTicker(f.FeeToken)
-
-		fee, err := strconv.ParseFloat(f.Fee, 64)
-		if err != nil {
-			return tradesSlice, err
-		}
-
-		var feeUSD float64
-		if token.IsStablecoin(feeCurrency) {
-			feeUSD = fee
-		} else {
-			feeUSD = 0 // TODO get historical price and compute fee usd
+		fee, _ := strconv.ParseFloat(f.Fee, 64)
+		feeUSD := fee
+		if !token.IsStablecoin(feeCurrency) {
+			feeUSD *= price
 		}
 
 		tradesSlice = append(tradesSlice, grist.Trade{
-			Time:        f.Time,
-			OrderValue:  price * size,
-			Direction:   direction,
-			Exchange:    "Hyperliquid",
-			OrderType:   "Market",
-			Market:      market,
-			Price:       price,
-			OrderSize:   size,
-			Ticker:      base,
-			Fee:         fee,
-			FeeCurrency: feeCurrency,
-			FeeUSD:      feeUSD,
-			PnL:         0,
-			TradeID:     strconv.FormatInt(f.Tid, 10),
+			Time:             f.Time,
+			OrderValue:       price * size,
+			Direction:        direction,
+			Exchange:         "Hyperliquid",
+			OrderType:        "Market",
+			Market:           market,
+			Price:            price,
+			OrderSize:        size,
+			Ticker:           base,
+			Fee:              fee,
+			FeeCurrency:      feeCurrency,
+			FeeUSD:           feeUSD,
+			PnL:              0,
+			TradeID:          strconv.FormatInt(f.Tid, 10),
+			AggregatedTrades: entry.count,
 		})
 	}
 
@@ -154,7 +201,7 @@ func updateTrades(ctx context.Context, h hyperliquid.Hyperliquid, g grist.Grist,
 		updateStatus(fmt.Sprintf("[%s] Processing %d fills...", wallet.Label, len(fills)))
 		totalFills += len(fills)
 
-		tradesSlice, err := processFills(ctx, h, g, fills)
+		tradesSlice, err := processFills(h, fills)
 		if err != nil {
 			return fmt.Errorf("generate upserts: %w", err)
 		}
