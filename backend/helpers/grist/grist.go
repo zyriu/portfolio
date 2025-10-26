@@ -112,8 +112,7 @@ func (g *Grist) GetExchangeLatestTrades(ctx context.Context, exchange string, li
 	return latestTrades, nil
 }
 
-func (g *Grist) GetMatchingRecordsAmount(ctx context.Context, table string, where string) (int64, error) {
-	query := fmt.Sprintf(`q=SELECT COUNT(*) AS n FROM "%s" WHERE %s`, table, where)
+func (g *Grist) getCount(ctx context.Context, method string, query string) (int64, error) {
 	u := g.generateSqlUrl(query)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
@@ -124,11 +123,11 @@ func (g *Grist) GetMatchingRecordsAmount(ctx context.Context, table string, wher
 
 	resp := misc.DoWithRetry(ctx, req)
 	if resp.Err != nil {
-		return 0, fmt.Errorf("grist.GetRecords: %s", resp.Err)
+		return 0, fmt.Errorf("%s: %s", method, resp.Err)
 	}
 
 	if resp.Status != http.StatusOK {
-		return 0, fmt.Errorf("grist.GetRecords: code %d: %s", resp.Status, resp.Err)
+		return 0, fmt.Errorf("%s: code %d: %s", method, resp.Status, resp.Err)
 	}
 
 	var out struct {
@@ -145,6 +144,16 @@ func (g *Grist) GetMatchingRecordsAmount(ctx context.Context, table string, wher
 
 	count, _ := out.Records[0].Fields.N.Int64()
 	return count, nil
+}
+
+func (g *Grist) GetMatchingRecordsAmount(ctx context.Context, table string, where string) (int64, error) {
+	query := fmt.Sprintf(`q=SELECT COUNT(*) AS n FROM "%s" WHERE %s`, table, where)
+	return g.getCount(ctx, "grist.GetMatchingRecordsAmount", query)
+}
+
+func (g *Grist) GetAggregatedTradesCount(ctx context.Context, exchange string) (int64, error) {
+	query := fmt.Sprintf(`q=SELECT SUM(COALESCE("Aggregated_Trades", 1)) AS n FROM "Trades" WHERE "Exchange" = '%s'`, exchange)
+	return g.getCount(ctx, "grist.GetAggregatedTradesCount", query)
 }
 
 func (g *Grist) GetRecords(ctx context.Context, table string, query string) (Records, error) {

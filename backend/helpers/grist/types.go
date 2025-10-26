@@ -44,20 +44,21 @@ type Token struct {
 type Tokens map[string]Token
 
 type Trade struct {
-	Time        int64   `json:"Time"`
-	OrderValue  float64 `json:"Order_Value"`
-	Direction   string  `json:"Direction"`
-	Exchange    string  `json:"Exchange"`
-	Market      string  `json:"Market"`
-	OrderType   string  `json:"Order_Type"`
-	Price       float64 `json:"Price"`
-	OrderSize   float64 `json:"Order_Size"`
-	Ticker      string  `json:"Ticker"`
-	Fee         float64 `json:"Fee"`
-	FeeCurrency string  `json:"Fee_Currency"`
-	FeeUSD      float64 `json:"Fee_USD_"`
-	PnL         float64 `json:"PnL"`
-	TradeID     string  `json:"Trade_ID"`
+	Time             int64   `json:"Time"`
+	OrderValue       float64 `json:"Order_Value"`
+	Direction        string  `json:"Direction"`
+	Exchange         string  `json:"Exchange"`
+	Market           string  `json:"Market"`
+	OrderType        string  `json:"Order_Type"`
+	Price            float64 `json:"Price"`
+	OrderSize        float64 `json:"Order_Size"`
+	Ticker           string  `json:"Ticker"`
+	Fee              float64 `json:"Fee"`
+	FeeCurrency      string  `json:"Fee_Currency"`
+	FeeUSD           float64 `json:"Fee_USD_"`
+	PnL              float64 `json:"PnL"`
+	TradeID          string  `json:"Trade_ID"`
+	AggregatedTrades int     `json:"Aggregated_Trades"`
 }
 
 type UpsertOpts struct {
