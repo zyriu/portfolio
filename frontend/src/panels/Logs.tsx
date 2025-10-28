@@ -97,7 +97,7 @@ export default function Logs() {
   const gridRef = React.useRef<HTMLDivElement>(null);
   const [columnsPerRow, setColumnsPerRow] = useState(1);
   const [executingJobs, setExecutingJobs] = useState<Set<string>>(new Set());
-  const [currentExecutingExecution, setCurrentExecutingExecution] = useState<JobExecution | null>(null);
+  const [currentExecutingExecutions, setCurrentExecutingExecutions] = useState<Map<string, JobExecution>>(new Map());
 
   useEffect(() => {
     const fetchJobStates = async () => {
@@ -111,19 +111,18 @@ export default function Logs() {
         });
         setExecutingJobs(executing);
         
-        // Find the currently executing execution (most recent running execution)
         const runningExecutions = executions.filter(exec => exec.status === 'running');
-        if (runningExecutions.length > 0) {
-          // Sort by start time descending to get the most recent
-          const mostRecent = runningExecutions.sort((a, b) => 
-            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-          )[0];
-          setCurrentExecutingExecution(mostRecent);
-        } else {
-          setCurrentExecutingExecution(null);
-        }
+        const executingExecutionsMap = new Map<string, JobExecution>();
+        
+        runningExecutions.forEach(exec => {
+          const existing = executingExecutionsMap.get(exec.jobName);
+          if (!existing || new Date(exec.startTime).getTime() > new Date(existing.startTime).getTime()) {
+            executingExecutionsMap.set(exec.jobName, exec);
+          }
+        });
+        
+        setCurrentExecutingExecutions(executingExecutionsMap);
       } catch (err) {
-        // Handle error silently
       }
     };
 
@@ -132,13 +131,12 @@ export default function Logs() {
     return () => clearInterval(interval);
   }, [executions]);
 
-  // Calculate how many columns fit in the grid
   useEffect(() => {
     const updateColumns = () => {
       if (gridRef.current) {
         const gridWidth = gridRef.current.offsetWidth;
-        const gap = 16; // gap from CSS
-        const minColumnWidth = 280; // minmax(280px, 1fr) from CSS
+        const gap = 16;
+        const minColumnWidth = 280;
         const columns = Math.floor((gridWidth + gap) / (minColumnWidth + gap));
         setColumnsPerRow(Math.max(1, columns));
       }
@@ -150,34 +148,29 @@ export default function Logs() {
   }, []);
 
   const handleToggleExecution = (execution: JobExecution) => {
-    if (currentExecutingExecution?.id === execution.id) {
+    if (currentExecutingExecutions.get(execution.jobName)?.id === execution.id) {
       return;
     }
 
     if (selectedExecution?.id === execution.id) {
-      // Start closing animation
       setIsClosing(true);
-      // Wait for animation to complete before removing
       setTimeout(() => {
         setSelectedExecution(null);
         setIsClosing(false);
-      }, 300); // Match the animation duration
+      }, 300);
     } else {
       setSelectedExecution(execution);
       setIsClosing(false);
     }
   };
 
-  // Calculate where to insert the card - after the last item in the current row
   const getCardInsertionIndex = () => {
     if (!selectedExecution) return -1;
     
     const selectedIndex = executions.findIndex(exec => exec.id === selectedExecution.id);
     if (selectedIndex === -1) return -1;
 
-    // Calculate which row this item is in (0-based)
     const currentRow = Math.floor(selectedIndex / columnsPerRow);
-    // Calculate the last index in this row
     const lastIndexInRow = Math.min((currentRow + 1) * columnsPerRow - 1, executions.length - 1);
     
     return lastIndexInRow;
@@ -200,7 +193,7 @@ export default function Logs() {
                   execution={execution}
                   onSelect={handleToggleExecution}
                   isSelected={selectedExecution?.id === execution.id}
-                  isExecuting={currentExecutingExecution?.id === execution.id}
+                  isExecuting={currentExecutingExecutions.get(execution.jobName)?.id === execution.id}
                 />
                 {selectedExecution && cardInsertionIndex === index && (
                   <div className={`log-viewer-card-wrapper ${isClosing ? 'closing' : ''}`}>
