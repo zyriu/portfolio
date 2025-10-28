@@ -97,8 +97,8 @@ export default function Logs() {
   const gridRef = React.useRef<HTMLDivElement>(null);
   const [columnsPerRow, setColumnsPerRow] = useState(1);
   const [executingJobs, setExecutingJobs] = useState<Set<string>>(new Set());
+  const [currentExecutingExecution, setCurrentExecutingExecution] = useState<JobExecution | null>(null);
 
-  // Track which jobs are currently executing
   useEffect(() => {
     const fetchJobStates = async () => {
       try {
@@ -110,6 +110,18 @@ export default function Logs() {
           }
         });
         setExecutingJobs(executing);
+        
+        // Find the currently executing execution (most recent running execution)
+        const runningExecutions = executions.filter(exec => exec.status === 'running');
+        if (runningExecutions.length > 0) {
+          // Sort by start time descending to get the most recent
+          const mostRecent = runningExecutions.sort((a, b) => 
+            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+          )[0];
+          setCurrentExecutingExecution(mostRecent);
+        } else {
+          setCurrentExecutingExecution(null);
+        }
       } catch (err) {
         // Handle error silently
       }
@@ -118,7 +130,7 @@ export default function Logs() {
     fetchJobStates();
     const interval = setInterval(fetchJobStates, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [executions]);
 
   // Calculate how many columns fit in the grid
   useEffect(() => {
@@ -138,8 +150,7 @@ export default function Logs() {
   }, []);
 
   const handleToggleExecution = (execution: JobExecution) => {
-    // Don't allow expansion if the job is currently executing
-    if (executingJobs.has(execution.jobName)) {
+    if (currentExecutingExecution?.id === execution.id) {
       return;
     }
 
@@ -189,7 +200,7 @@ export default function Logs() {
                   execution={execution}
                   onSelect={handleToggleExecution}
                   isSelected={selectedExecution?.id === execution.id}
-                  isExecuting={executingJobs.has(execution.jobName)}
+                  isExecuting={currentExecutingExecution?.id === execution.id}
                 />
                 {selectedExecution && cardInsertionIndex === index && (
                   <div className={`log-viewer-card-wrapper ${isClosing ? 'closing' : ''}`}>
