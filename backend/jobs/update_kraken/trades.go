@@ -16,14 +16,19 @@ func updateTrades(ctx context.Context, k kraken.Kraken, g grist.Grist, statusCha
 		return err
 	}
 
-	statusChan <- "Fetching trade book from Grist..."
-	book, err := g.FetchBook(ctx)
+	statusChan <- "Fetching total trade count from Kraken..."
+	t, err := k.GetTradesHistory(ctx, 0)
 	if err != nil {
 		return err
 	}
 
-	statusChan <- "Fetching total trade count from Kraken..."
-	t, err := k.GetTradesHistory(ctx, 0)
+	if count == t.Result.Count {
+		statusChan <- "No new trades found"
+		return nil
+	}
+
+	statusChan <- "Fetching trade book from Grist..."
+	book, err := g.FetchBook(ctx)
 	if err != nil {
 		return err
 	}
