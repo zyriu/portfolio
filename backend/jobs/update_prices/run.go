@@ -3,6 +3,7 @@ package update_prices
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/zyriu/portfolio/backend/helpers/coingecko"
@@ -25,54 +26,50 @@ func Run(ctx context.Context, _ ...any) error {
 		return err
 	}
 
-	updateStatus("Fetching current prices from CoinGecko API...")
-	prices, err := coingecko.FetchSimplePrices(ctx, records)
+	coingeckoIDs := grist.ExtractColumnDataFromRecords[string](records, "Coingecko_ID")
+	coingeckoIDs = slices.DeleteFunc(coingeckoIDs, func(v string) bool { return v == "" })
+
+	updateStatus("Fetching coin markets from CoinGecko API...")
+	markets, err := coingecko.FetchCoinMarkets(ctx, coingeckoIDs)
 	if err != nil {
 		return err
 	}
 
-	updateStatus(fmt.Sprintf("✓ Received %d prices from CoinGecko", len(prices)))
+	updateStatus(fmt.Sprintf("✓ Received %d coin markets from CoinGecko", len(markets)))
 	updateStatus("Processing and matching prices with tokens...")
+
 	var upserts []grist.Upsert
-	skipped := 0
-	seen := make(map[string]bool)
+
+	marketByID := make(map[string]coingecko.CoinMarket, len(markets))
+	for _, m := range markets {
+		marketByID[m.ID] = m
+	}
+
 	for _, r := range records.Records {
 		raw, ok := r.Fields["Coingecko_ID"]
 		if !ok || raw == nil {
-			skipped++
 			continue
 		}
 
 		coinID := strings.TrimSpace(fmt.Sprint(raw))
 		if coinID == "" {
-			skipped++
 			continue
 		}
 
-		price, ok := prices[coinID]
+		market, ok := marketByID[coinID]
 		if !ok {
-			skipped++
 			continue
 		}
-
-		// Check if we've already seen this CoinGecko_ID and upserted it
-		if _, exists := seen[coinID]; exists {
-			continue
-		}
-		seen[coinID] = true
 
 		upserts = append(upserts, grist.Upsert{
 			Require: map[string]any{
 				"Coingecko_ID": coinID,
 			},
 			Fields: map[string]any{
-				"Price": price,
+				"Price":         market.CurrentPrice,
+				"All_Time_High": market.ATH,
 			},
 		})
-	}
-
-	if skipped > 0 {
-		updateStatus(fmt.Sprintf("Skipped %d tokens (missing CoinGecko ID or price not available)", skipped))
 	}
 
 	if len(upserts) > 0 {

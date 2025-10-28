@@ -6,55 +6,43 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 
-	"github.com/zyriu/portfolio/backend/helpers/grist"
 	"github.com/zyriu/portfolio/backend/helpers/misc"
 )
 
 const apiBaseUrl = "https://api.coingecko.com/api"
 
-func FetchSimplePrices(ctx context.Context, gristRecords grist.Records) (map[string]float64, error) {
-	prices := make(map[string]float64)
+func FetchCoinMarkets(ctx context.Context, coingeckoIDs []string) ([]CoinMarket, error) {
+	markets := make([]CoinMarket, 0)
 
-	coingeckoIDs := grist.ExtractColumnDataFromRecords[string](gristRecords, "Coingecko_ID")
-	coingeckoIDs = slices.DeleteFunc(coingeckoIDs, func(v string) bool { return v == "" })
-
-	const chunkSize = 100
+	const chunkSize = 250
 	for i := 0; i < len(coingeckoIDs); i += chunkSize {
-		end := i + chunkSize
-		if end > len(coingeckoIDs) {
-			end = len(coingeckoIDs)
-		}
+		end := min(i+chunkSize, len(coingeckoIDs))
 
 		chunk := coingeckoIDs[i:end]
 		q := url.Values{}
 		q.Set("ids", strings.Join(chunk, ","))
-		q.Set("vs_currencies", "usd")
-		u := apiBaseUrl + "/v3/simple/price?" + q.Encode()
+		q.Set("vs_currency", "usd")
+		u := apiBaseUrl + "/v3/coins/markets?" + q.Encode()
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 		if err != nil {
-			return prices, err
+			return nil, err
 		}
 
 		resp := misc.DoWithRetry(ctx, req)
 		if resp.Err != nil {
-			return nil, resp.Err
+			return nil, fmt.Errorf("send request: %w", resp.Err)
 		}
 
-		respMap := make(map[string]map[string]float64)
-		if err := json.Unmarshal(resp.Body, &respMap); err != nil {
-			return nil, fmt.Errorf("decode response: %w", err)
+		var m []CoinMarket
+		if err := json.Unmarshal(resp.Body, &m); err != nil {
+			return nil, fmt.Errorf("unmarshal response: %w", err)
 		}
 
-		for coin, m := range respMap {
-			if usd, ok := m["usd"]; ok {
-				prices[coin] = usd
-			}
-		}
+		markets = append(markets, m...)
 	}
 
-	return prices, nil
+	return markets, nil
 }

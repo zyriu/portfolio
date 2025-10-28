@@ -244,6 +244,16 @@ func (m *Manager) Trigger(name string) error {
 	return nil
 }
 
+func (m *Manager) ClearError(name string) error {
+	j, err := m.get(name)
+	if err != nil {
+		return err
+	}
+	j.ClearError()
+	m.emit("job_error_cleared", map[string]any{"name": name})
+	return nil
+}
+
 // StopAndRemove stops a job and removes it from the manager
 func (m *Manager) StopAndRemove(name string) error {
 	m.mu.Lock()

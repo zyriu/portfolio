@@ -340,3 +340,10 @@ func (j *jobController) Trigger() {
 	default:
 	}
 }
+
+func (j *jobController) ClearError() {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.lastErr = nil
+	j.currentStatus = "Job ready"
+}

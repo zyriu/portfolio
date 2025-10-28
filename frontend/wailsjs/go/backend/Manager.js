@@ -10,6 +10,10 @@ export function AddAndStartWithLastRun(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['backend']['Manager']['AddAndStartWithLastRun'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function ClearError(arg1) {
+  return window['go']['backend']['Manager']['ClearError'](arg1);
+}
+
 export function GetExecutions() {
   return window['go']['backend']['Manager']['GetExecutions']();
 }

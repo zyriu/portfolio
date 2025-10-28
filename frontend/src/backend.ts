@@ -1,6 +1,6 @@
 import { defaultSettings, Settings } from "./types";
 // existing Wails Manager bindings for jobs:
-import { Jobs, SetInterval, Pause, Resume, Trigger, LoadSettings, SaveSettings, SyncJobsWithSettingsPublic, GetExecutions } from "../wailsjs/go/backend/Manager";
+import { Jobs, SetInterval, Pause, Resume, Trigger, LoadSettings, SaveSettings, SyncJobsWithSettingsPublic, GetExecutions, ClearError } from "../wailsjs/go/backend/Manager";
 
 export async function loadSettings(): Promise<Settings> {
   try {
@@ -23,4 +23,4 @@ export async function saveSettings(s: Settings): Promise<void> {
 }
 
 // Job control passthroughs (these already exist on backend.Manager)
-export const backendJobs = { Jobs, SetInterval, Pause, Resume, Trigger, SyncJobsWithSettings: SyncJobsWithSettingsPublic, GetExecutions };
+export const backendJobs = { Jobs, SetInterval, Pause, Resume, Trigger, SyncJobsWithSettings: SyncJobsWithSettingsPublic, GetExecutions, ClearError };

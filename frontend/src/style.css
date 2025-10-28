@@ -321,6 +321,7 @@ input[type="number"] {
 
 /* Job Cards */
 .job-card {
+    position: relative;
     background-color: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -336,8 +337,20 @@ input[type="number"] {
     transform: translateY(-2px);
 }
 
+.job-card.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.job-card.clickable:hover {
+    background-color: var(--bg-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
 
 .job-card-header {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -359,11 +372,13 @@ input[type="number"] {
 }
 
 .job-error-icon {
-    font-size: 0.875rem;
+    position: absolute;
+    top: 0;
+    right: 0;
     animation: errorPulse 2s ease-in-out infinite;
     cursor: pointer;
     transition: transform 0.2s ease;
-    display: inline-block;
+    display: block;
     width: 12px;
     height: 12px;
     border-radius: 50%;

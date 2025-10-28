@@ -13,7 +13,6 @@ func UpdateBookEntry(trade grist.Trade, entry grist.BookEntry) (grist.Trade, gri
 }
 
 func updateSpot(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist.BookEntry) {
-	// This is for Spot positions only. No shorts, so position size cannot be negative.
 	qty := trade.OrderSize
 	price := trade.Price
 
@@ -26,7 +25,6 @@ func updateSpot(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist.Bo
 
 	switch trade.Direction {
 	case "Buy":
-		// Increase/incept position, average up/down
 		newPos = pos + qty
 		newCostBasis = costBasis + price*qty
 		if newPos != 0 {
@@ -35,13 +33,8 @@ func updateSpot(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist.Bo
 			newAvg = 0
 			newCostBasis = 0
 		}
-		// No realized PnL for buys in spot, as position is only opened or increased
 	case "Sell":
-		// Decrease position, calculate realized PnL
-		if qty > pos {
-			// Selling more than you have -- not allowed in spot, clamp qty
-			qty = pos
-		}
+		qty = min(qty, pos)
 		newPos = pos - qty
 		realizedPnL = (price - avg) * qty
 		newCostBasis = avg * newPos
@@ -53,7 +46,6 @@ func updateSpot(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist.Bo
 		}
 	}
 
-	// Ensure position size is never negative in spot
 	if newPos < 0 {
 		newPos = 0
 		newAvg = 0
@@ -65,13 +57,12 @@ func updateSpot(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist.Bo
 	entry.CostBasis = newCostBasis
 
 	trade.PnL = realizedPnL
-	trade.OrderValue = price * qty // OrderValue, unless it's a forbidden sell (qty clamped above)
+	trade.OrderValue = price * qty
 
 	return trade, entry
 }
 
 func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist.BookEntry) {
-	// This is for Futures positions. Position size can be negative (naked short).
 	qty := trade.OrderSize
 	price := trade.Price
 
@@ -85,9 +76,7 @@ func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist
 	switch trade.Direction {
 	case "Buy":
 		if pos < 0 {
-			// Reducing or closing a short position, maybe flipping to long
 			if qty <= -pos {
-				// Just reducing (not flipping)
 				realizedPnL = (avg - price) * qty
 				newPos = pos + qty
 				newCostBasis = avg * newPos
@@ -97,9 +86,8 @@ func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist
 					newCostBasis = 0
 				}
 			} else {
-				// Flipping from short to long: 1) close short, 2) open long for remainder
 				realizedPnL = (avg - price) * (-pos)
-				longQty := qty + pos // qty > -pos, so this is positive
+				longQty := qty + pos
 				newPos = longQty
 				newCostBasis = price * newPos
 				if newPos != 0 {
@@ -110,7 +98,6 @@ func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist
 				}
 			}
 		} else {
-			// Adding to or opening a long position, just average up/down
 			newPos = pos + qty
 			newCostBasis = costBasis + price*qty
 			if newPos != 0 {
@@ -122,9 +109,7 @@ func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist
 		}
 	case "Sell":
 		if pos > 0 {
-			// Reducing or closing a long position, maybe flipping to short
 			if qty <= pos {
-				// Just reducing (not flipping)
 				realizedPnL = (price - avg) * qty
 				newPos = pos - qty
 				newCostBasis = avg * newPos
@@ -134,11 +119,10 @@ func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist
 					newCostBasis = 0
 				}
 			} else {
-				// Flipping from long to short: 1) close long, 2) open short for remainder
 				realizedPnL = (price - avg) * pos
-				shortQty := qty - pos // qty > pos, so this is positive
+				shortQty := qty - pos
 				newPos = -shortQty
-				newCostBasis = price * newPos // newPos negative, costBasis negative
+				newCostBasis = price * newPos
 				if newPos != 0 {
 					newAvg = price
 				} else {
@@ -147,7 +131,6 @@ func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist
 				}
 			}
 		} else {
-			// Adding to or opening a short position, just average up/down
 			newPos = pos - qty
 			newCostBasis = costBasis - price*qty
 			if newPos != 0 {
@@ -158,8 +141,6 @@ func updateFutures(trade grist.Trade, entry grist.BookEntry) (grist.Trade, grist
 			}
 		}
 	}
-
-	// No constraint: newPos can be negative (short), positive (long), or zero (flat)
 
 	entry.PositionSize = newPos
 	entry.AveragePrice = newAvg

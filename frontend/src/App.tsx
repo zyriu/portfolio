@@ -19,7 +19,8 @@ interface JobState {
 function AppContent() {
   const [section, setSection] = useState<Section>("jobs");
   const [jobs, setJobs] = useState<JobState[]>([]);
-  const { setExecutions } = useJobExecution();
+  const [errorJobName, setErrorJobName] = useState<string | null>(null);
+  const { setExecutions, executions } = useJobExecution();
 
   const fetchJobs = async () => {
     try {
@@ -53,6 +54,24 @@ function AppContent() {
     }
   };
 
+  const handleErrorClick = async (jobName: string) => {
+    try {
+      // Clear the error first
+      await backendJobs.ClearError(jobName);
+      
+      // Set the job name for auto-expanding the log
+      setErrorJobName(jobName);
+      
+      // Switch to logs panel
+      setSection("logs");
+      
+      // Refresh jobs to update the UI
+      await fetchJobs();
+    } catch (err) {
+      console.error("Failed to clear error:", err);
+    }
+  };
+
   // Poll jobs and executions continuously at the app level
   useEffect(() => {
     fetchJobs();
@@ -70,9 +89,15 @@ function AppContent() {
         <Jobs 
           jobs={jobs} 
           onRefreshJobs={fetchJobs}
+          onErrorClick={handleErrorClick}
         />
       )}
-      {section === "logs" && <Logs />}
+      {section === "logs" && (
+        <Logs 
+          errorJobName={errorJobName}
+          onErrorLogExpanded={() => setErrorJobName(null)}
+        />
+      )}
     </Layout>
   );
 }

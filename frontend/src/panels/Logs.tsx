@@ -90,7 +90,13 @@ function LogViewerCard({ execution }: { execution: JobExecution }) {
   );
 }
 
-export default function Logs() {
+export default function Logs({ 
+  errorJobName, 
+  onErrorLogExpanded 
+}: { 
+  errorJobName: string | null;
+  onErrorLogExpanded: () => void;
+}) {
   const { executions } = useJobExecution();
   const [selectedExecution, setSelectedExecution] = useState<JobExecution | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -146,6 +152,32 @@ export default function Logs() {
     window.addEventListener('resize', updateColumns);
     return () => window.removeEventListener('resize', updateColumns);
   }, []);
+
+  // Auto-expand the most recent failed execution for the error job
+  useEffect(() => {
+    if (errorJobName && executions.length > 0) {
+      // Find the most recent failed execution for the specific job
+      const failedExecutions = executions.filter(exec => 
+        exec.jobName === errorJobName && exec.status === 'failed'
+      );
+      
+      if (failedExecutions.length > 0) {
+        // Sort by start time (most recent first) and take the first one
+        const mostRecentFailed = failedExecutions.sort((a, b) => 
+          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        )[0];
+        
+        // Auto-expand after a short delay to ensure the UI is ready
+        setTimeout(() => {
+          setSelectedExecution(mostRecentFailed);
+          onErrorLogExpanded(); // Clear the errorJobName
+        }, 100);
+      } else {
+        // No failed executions found, clear the errorJobName
+        onErrorLogExpanded();
+      }
+    }
+  }, [errorJobName, executions, onErrorLogExpanded]);
 
   const handleToggleExecution = (execution: JobExecution) => {
     if (currentExecutingExecutions.get(execution.jobName)?.id === execution.id) {

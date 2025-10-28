@@ -15,10 +15,12 @@ interface JobState {
 
 function JobCard({ 
   job, 
-  onRefreshJobs
+  onRefreshJobs,
+  onErrorClick
 }: { 
   job: JobState, 
-  onRefreshJobs: () => Promise<void>
+  onRefreshJobs: () => Promise<void>,
+  onErrorClick: (jobName: string) => void
 }) {
   const [now, setNow] = useState(Date.now() / 1000);
   const [isTriggering, setIsTriggering] = useState(false);
@@ -66,8 +68,19 @@ function JobCard({
     }
   };
 
+  const hasError = job.err && job.err.trim() !== '';
+
+  const handleCardClick = () => {
+    if (hasError) {
+      onErrorClick(job.name);
+    }
+  };
+
   return (
-    <div className="job-card">
+    <div 
+      className={`job-card ${hasError ? 'has-error' : ''} ${hasError ? 'clickable' : ''}`}
+      onClick={handleCardClick}
+    >
       <div className="job-card-header">
         <div className="job-name-and-controls">
           <h3 className="job-name">{formatJobName(job.name)}</h3>
@@ -87,7 +100,8 @@ function JobCard({
             )}
           </button>
         </div>
-      </div>
+        {hasError && <div className="job-error-icon" title={job.err} />}
+        </div>
       
       <div className="job-progress-section">
         <div className="job-progress-container">
@@ -106,10 +120,12 @@ function JobCard({
 
 export default function Jobs({ 
   jobs, 
-  onRefreshJobs
+  onRefreshJobs,
+  onErrorClick
 }: { 
   jobs: JobState[], 
-  onRefreshJobs: () => Promise<void>
+  onRefreshJobs: () => Promise<void>,
+  onErrorClick: (jobName: string) => void
 }) {
 
   const enabledJobs = jobs.filter(job => job.running);
@@ -134,6 +150,7 @@ export default function Jobs({
               key={job.name} 
               job={job} 
               onRefreshJobs={onRefreshJobs}
+              onErrorClick={onErrorClick}
             />
           ))}
         </div>

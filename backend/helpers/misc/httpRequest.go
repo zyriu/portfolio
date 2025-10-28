@@ -22,19 +22,14 @@ type FetchResult struct {
 
 func computeBackoff(base, max time.Duration, attempt int) time.Duration {
 	pow := math.Pow(2, float64(attempt))
-	delay := time.Duration(float64(base) * pow)
-	if delay > max {
-		delay = max
-	}
+	delay := min(time.Duration(float64(base)*pow), max)
 
 	jitter := 0.2 * (rand.Float64()*2 - 1) // [-0.2, +0.2]
 	return time.Duration(float64(delay) * (1 + jitter))
 }
 
 func DoAllWithRetry(ctx context.Context, requests []*http.Request, concurrency int) ([]FetchResult, error) {
-	if concurrency < 1 {
-		concurrency = len(requests)
-	}
+	concurrency = max(concurrency, 1)
 
 	results := make([]FetchResult, len(requests))
 
@@ -141,10 +136,7 @@ func DoWithRetry(ctx context.Context, req *http.Request) FetchResult {
 						return FetchResult{Status: resp.StatusCode, Body: bodyBytes, Err: ctx.Err()}
 					}
 				} else if t, parseErr := http.ParseTime(ra); parseErr == nil {
-					delay := time.Until(t)
-					if delay < 0 {
-						delay = 0
-					}
+					delay := max(time.Until(t), 0)
 					select {
 					case <-time.After(delay):
 						continue

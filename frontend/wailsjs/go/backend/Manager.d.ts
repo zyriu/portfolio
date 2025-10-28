@@ -8,6 +8,8 @@ export function AddAndStart(arg1:string,arg2:time.Duration,arg3:backend.JobRunne
 
 export function AddAndStartWithLastRun(arg1:string,arg2:time.Duration,arg3:backend.JobRunnerFunc,arg4:time.Time,arg5:Array<any>):Promise<void>;
 
+export function ClearError(arg1:string):Promise<void>;
+
 export function GetExecutions():Promise<Array<backend.JobExecution>>;
 
 export function Jobs():Promise<Array<backend.JobState>>;
