@@ -94,19 +94,11 @@ func (j *jobController) StartWithLastRun(parent context.Context, lastRun time.Ti
 }
 
 func (j *jobController) loop() {
-	// Run immediately on startup only if no lastRun time is set
-	j.mu.RLock()
-	hasLastRun := !j.lastRun.IsZero()
-	j.mu.RUnlock()
-
-	if !hasLastRun {
-		j.runOnce()
-	}
-
-	// Calculate initial timer duration
+	// Calculate initial timer duration and determine if we should run immediately
 	var initialDuration time.Duration
 	var shouldRunImmediately bool
 	j.mu.RLock()
+	hasLastRun := !j.lastRun.IsZero()
 	if j.paused {
 		initialDuration = time.Hour * 24 * 365 * 100 // effectively never
 	} else if hasLastRun {
@@ -120,11 +112,11 @@ func (j *jobController) loop() {
 			initialDuration = timeUntilNext
 		}
 	} else {
+		shouldRunImmediately = true
 		initialDuration = j.interval
 	}
 	j.mu.RUnlock()
 
-	// Run immediately if next run time has already passed
 	if shouldRunImmediately {
 		j.runOnce()
 	}
@@ -133,8 +125,9 @@ func (j *jobController) loop() {
 	var timer <-chan time.Time
 	if initialDuration > 0 {
 		timer = time.After(initialDuration)
+	} else if shouldRunImmediately {
+		timer = time.After(j.interval)
 	} else {
-		// If initial duration is 0, create a channel that's already ready
 		ch := make(chan time.Time, 1)
 		ch <- time.Now()
 		timer = ch
