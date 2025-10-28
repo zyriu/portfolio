@@ -51,9 +51,14 @@ func updateBalances(ctx context.Context, k kraken.Kraken, g grist.Grist) error {
 		})
 	}
 
-	updateStatus(fmt.Sprintf("Upserting %d positions to Grist...", len(upserts)))
-	if err := g.UpsertRecords(ctx, "Positions_Crypto_", upserts, grist.UpsertOpts{}); err != nil {
-		return err
+	if len(upserts) > 0 {
+		updateStatus(fmt.Sprintf("Upserting %d positions to Grist...", len(upserts)))
+		if err := g.UpsertRecords(ctx, "Positions_Crypto_", upserts, grist.UpsertOpts{}); err != nil {
+			return err
+		}
+		updateStatus(fmt.Sprintf("✓ Successfully synced %d positions", len(upserts)))
+	} else {
+		updateStatus("No positions to sync")
 	}
 
 	return nil
