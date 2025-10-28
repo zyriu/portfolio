@@ -52,6 +52,26 @@ func updateBalances(ctx context.Context, k kraken.Kraken, g grist.Grist) error {
 	}
 
 	if len(upserts) > 0 {
+		updateStatus("Checking for existing records to clean up...")
+		records, err := g.GetRecords(ctx, "Positions_Crypto_", "filter={\"Wallet\":[\"Kraken\"]}")
+		if err != nil {
+			return err
+		}
+
+		var recordsToDelete []int64
+		for _, record := range records.Records {
+			recordsToDelete = append(recordsToDelete, record.RecordID)
+		}
+
+		if len(recordsToDelete) > 0 {
+			updateStatus(fmt.Sprintf("Deleting %d old record(s)...", len(recordsToDelete)))
+			if err := g.DeleteRecords(ctx, "Positions_Crypto_", recordsToDelete); err != nil {
+				return err
+			}
+		} else {
+			updateStatus("No old records to delete")
+		}
+
 		updateStatus(fmt.Sprintf("Upserting %d positions to Grist...", len(upserts)))
 		if err := g.UpsertRecords(ctx, "Positions_Crypto_", upserts, grist.UpsertOpts{}); err != nil {
 			return err
