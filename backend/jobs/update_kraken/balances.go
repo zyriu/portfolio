@@ -46,7 +46,7 @@ func updateBalances(ctx context.Context, k kraken.Kraken, g grist.Grist) error {
 			},
 			Fields: map[string]any{
 				"Amount":     total,
-				"Asset_Type": token.IsStableOrVolatile(ticker),
+				"Asset_Type": token.GetAssetType(ticker),
 			},
 		})
 	}

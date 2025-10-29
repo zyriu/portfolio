@@ -54,7 +54,7 @@ func appendOpenedPositions(wallet string, yieldPositions []grist.Upsert, missing
 			},
 			Fields: map[string]any{
 				"Underlying":     underlying,
-				"Asset_Type":     token.IsStableOrVolatile(underlying),
+				"Asset_Type":     token.GetAssetType(underlying),
 				"Exposure":       exposure,
 				"Pool_Type":      poolType,
 				"Current_Value":  position.Valuation,

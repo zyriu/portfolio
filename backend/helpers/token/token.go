@@ -2,9 +2,13 @@ package token
 
 import "strings"
 
-func IsStableOrVolatile(ticker string) string {
-	if IsStablecoin(ticker) == true {
+func GetAssetType(ticker string) string {
+	if IsStablecoin(ticker) {
 		return "Stable"
+	}
+
+	if strings.Contains(ticker, "XAUT") {
+		return "Commodity"
 	}
 
 	return "Volatile"

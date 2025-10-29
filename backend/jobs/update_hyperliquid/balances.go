@@ -33,7 +33,7 @@ func updateBalances(ctx context.Context, h hyperliquid.Hyperliquid, g grist.Gris
 			},
 			Fields: map[string]any{
 				"Amount":     balance.Total,
-				"Asset_Type": token.IsStableOrVolatile(ticker),
+				"Asset_Type": token.GetAssetType(ticker),
 			},
 		})
 	}

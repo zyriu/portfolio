@@ -82,7 +82,7 @@ func Run(ctx context.Context, args ...any) error {
 				},
 				Fields: map[string]any{
 					"Amount":     total,
-					"Asset_Type": token.IsStableOrVolatile(ticker),
+					"Asset_Type": token.GetAssetType(ticker),
 				},
 			})
 		}
