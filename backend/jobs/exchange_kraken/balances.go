@@ -1,4 +1,4 @@
-package update_kraken
+package exchange_kraken
 
 import (
 	"context"

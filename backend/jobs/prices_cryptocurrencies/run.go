@@ -1,4 +1,4 @@
-package update_prices
+package prices_cryptocurrencies
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package update_pendle
+package pendle_markets
 
 import (
 	"context"

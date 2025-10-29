@@ -1,4 +1,4 @@
-package update_pendle_positions
+package pendle_user_positions
 
 import (
 	"regexp"

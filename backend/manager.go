@@ -11,16 +11,16 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/zyriu/portfolio/backend/helpers/grist"
 	"github.com/zyriu/portfolio/backend/helpers/settings"
-	"github.com/zyriu/portfolio/backend/jobs/backup_grist"
-	"github.com/zyriu/portfolio/backend/jobs/update_evm_balances"
-	"github.com/zyriu/portfolio/backend/jobs/update_hyperliquid"
-	"github.com/zyriu/portfolio/backend/jobs/update_kraken"
-	"github.com/zyriu/portfolio/backend/jobs/update_lighter"
-	"github.com/zyriu/portfolio/backend/jobs/update_non_evm_balances"
-	"github.com/zyriu/portfolio/backend/jobs/update_pendle"
-	"github.com/zyriu/portfolio/backend/jobs/update_pendle_positions"
-	"github.com/zyriu/portfolio/backend/jobs/update_prices"
-	"github.com/zyriu/portfolio/backend/jobs/update_stocks"
+	"github.com/zyriu/portfolio/backend/jobs/balances_evm_chains"
+	"github.com/zyriu/portfolio/backend/jobs/balances_other_chains"
+	"github.com/zyriu/portfolio/backend/jobs/exchange_hyperliquid"
+	"github.com/zyriu/portfolio/backend/jobs/exchange_kraken"
+	"github.com/zyriu/portfolio/backend/jobs/exchange_lighter"
+	"github.com/zyriu/portfolio/backend/jobs/grist_backup"
+	"github.com/zyriu/portfolio/backend/jobs/pendle_markets"
+	"github.com/zyriu/portfolio/backend/jobs/pendle_user_positions"
+	"github.com/zyriu/portfolio/backend/jobs/prices_cryptocurrencies"
+	"github.com/zyriu/portfolio/backend/jobs/prices_stocks"
 )
 
 type JobLog struct {
@@ -316,36 +316,56 @@ func (m *Manager) createJobFromSettingsWithLastRun(name string, lastRun time.Tim
 	}
 
 	switch name {
-	case "backup_grist":
-		if !settingsData.Grist.Enabled {
-			return fmt.Errorf("grist job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Grist.Interval)*time.Second, backup_grist.Run, lastRun)
-	case "update_kraken":
-		if !settingsData.Exchanges.Kraken.Enabled {
-			return fmt.Errorf("kraken job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Kraken.Interval)*time.Second, update_kraken.Run, lastRun)
-	case "update_hyperliquid":
-		if !settingsData.Exchanges.Hyperliquid.Enabled {
-			return fmt.Errorf("hyperliquid job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Hyperliquid.Interval)*time.Second, update_hyperliquid.Run, lastRun)
-	case "update_lighter":
-		if !settingsData.Exchanges.Lighter.Enabled {
-			return fmt.Errorf("lighter job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Lighter.Interval)*time.Second, update_lighter.Run, lastRun)
-	case "update_evm_balances":
+	case "balances_evm_chains":
 		if !settingsData.OnChain.EVM.Enabled {
 			return fmt.Errorf("evm job is not enabled in settings")
 		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.EVM.Interval)*time.Second, update_evm_balances.Run, lastRun)
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.EVM.Interval)*time.Second, balances_evm_chains.Run, lastRun)
+	case "exchange_hyperliquid":
+		if !settingsData.Exchanges.Hyperliquid.Enabled {
+			return fmt.Errorf("hyperliquid job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Hyperliquid.Interval)*time.Second, exchange_hyperliquid.Run, lastRun)
+	case "exchange_kraken":
+		if !settingsData.Exchanges.Kraken.Enabled {
+			return fmt.Errorf("kraken job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Kraken.Interval)*time.Second, exchange_kraken.Run, lastRun)
+	case "exchange_lighter":
+		if !settingsData.Exchanges.Lighter.Enabled {
+			return fmt.Errorf("lighter job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Exchanges.Lighter.Interval)*time.Second, exchange_lighter.Run, lastRun)
+	case "grist_backup":
+		if !settingsData.Grist.Enabled {
+			return fmt.Errorf("grist job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Grist.Interval)*time.Second, grist_backup.Run, lastRun)
+	case "pendle_markets":
+		if !settingsData.Pendle.Markets.Enabled {
+			return fmt.Errorf("pendle markets job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Pendle.Markets.Interval)*time.Second, pendle_markets.Run, lastRun)
+	case "pendle_user_positions":
+		if !settingsData.Pendle.Positions.Enabled {
+			return fmt.Errorf("pendle positions job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Pendle.Positions.Interval)*time.Second, pendle_user_positions.Run, lastRun)
+	case "prices_cryptocurrencies":
+		if !settingsData.Settings.Prices.Enabled {
+			return fmt.Errorf("prices job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Settings.Prices.Interval)*time.Second, prices_cryptocurrencies.Run, lastRun)
+	case "prices_stocks":
+		if !settingsData.Settings.Stocks.Enabled {
+			return fmt.Errorf("stocks job is not enabled in settings")
+		}
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Settings.Stocks.Interval)*time.Second, prices_stocks.Run, lastRun)
 	case "update_bitcoin_balances":
 		if !settingsData.OnChain.Bitcoin.Enabled {
 			return fmt.Errorf("bitcoin job is not enabled in settings")
 		}
-		// Check if there are any bitcoin wallets
+
 		hasBitcoinWallet := false
 		nonEvmWallets := settings.GetNonEVMWallets(settingsData)
 		for _, w := range nonEvmWallets {
@@ -354,15 +374,17 @@ func (m *Manager) createJobFromSettingsWithLastRun(name string, lastRun time.Tim
 				break
 			}
 		}
+
 		if !hasBitcoinWallet {
 			return fmt.Errorf("no bitcoin wallets configured")
 		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.Bitcoin.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "bitcoin")
+
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.Bitcoin.Interval)*time.Second, balances_other_chains.Run, lastRun, "bitcoin")
 	case "update_solana_balances":
 		if !settingsData.OnChain.Solana.Enabled {
 			return fmt.Errorf("solana job is not enabled in settings")
 		}
-		// Check if there are any solana wallets
+
 		hasSolanaWallet := false
 		nonEvmWallets := settings.GetNonEVMWallets(settingsData)
 		for _, w := range nonEvmWallets {
@@ -371,30 +393,12 @@ func (m *Manager) createJobFromSettingsWithLastRun(name string, lastRun time.Tim
 				break
 			}
 		}
+
 		if !hasSolanaWallet {
 			return fmt.Errorf("no solana wallets configured")
 		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.Solana.Interval)*time.Second, update_non_evm_balances.Run, lastRun, "solana")
-	case "update_prices":
-		if !settingsData.Settings.Prices.Enabled {
-			return fmt.Errorf("prices job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Settings.Prices.Interval)*time.Second, update_prices.Run, lastRun)
-	case "update_stocks":
-		if !settingsData.Settings.Stocks.Enabled {
-			return fmt.Errorf("stocks job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Settings.Stocks.Interval)*time.Second, update_stocks.Run, lastRun)
-	case "update_pendle":
-		if !settingsData.Pendle.Markets.Enabled {
-			return fmt.Errorf("pendle markets job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Pendle.Markets.Interval)*time.Second, update_pendle.Run, lastRun)
-	case "update_pendle_positions":
-		if !settingsData.Pendle.Positions.Enabled {
-			return fmt.Errorf("pendle positions job is not enabled in settings")
-		}
-		m.AddAndStartWithLastRun(name, time.Duration(settingsData.Pendle.Positions.Interval)*time.Second, update_pendle_positions.Run, lastRun)
+
+		m.AddAndStartWithLastRun(name, time.Duration(settingsData.OnChain.Solana.Interval)*time.Second, balances_other_chains.Run, lastRun, "solana")
 	default:
 		return fmt.Errorf("unknown job name: %s", name)
 	}
@@ -411,50 +415,51 @@ func (m *Manager) isJobEnabledInSettings(jobName string) bool {
 	}
 
 	switch jobName {
-	case "backup_grist":
-		return settingsData.Grist.Enabled
-	case "update_kraken":
-		return settingsData.Exchanges.Kraken.Enabled
-	case "update_hyperliquid":
-		return settingsData.Exchanges.Hyperliquid.Enabled
-	case "update_lighter":
-		return settingsData.Exchanges.Lighter.Enabled
-	case "update_evm_balances":
+	case "balances_evm_chains":
 		return settingsData.OnChain.EVM.Enabled
+	case "exchange_hyperliquid":
+		return settingsData.Exchanges.Hyperliquid.Enabled
+	case "exchange_kraken":
+		return settingsData.Exchanges.Kraken.Enabled
+	case "exchange_lighter":
+		return settingsData.Exchanges.Lighter.Enabled
+	case "grist_backup":
+		return settingsData.Grist.Enabled
+	case "pendle_markets":
+		return settingsData.Pendle.Markets.Enabled
+	case "pendle_user_positions":
+		return settingsData.Pendle.Positions.Enabled
+	case "prices_cryptocurrencies":
+		return settingsData.Settings.Prices.Enabled
+	case "prices_stocks":
+		return settingsData.Settings.Stocks.Enabled
 	case "update_bitcoin_balances":
 		if !settingsData.OnChain.Bitcoin.Enabled {
 			return false
 		}
-		// Check if there are any bitcoin wallets
+
 		nonEvmWallets := settings.GetNonEVMWallets(settingsData)
 		for _, w := range nonEvmWallets {
 			if w.Type == "bitcoin" {
 				return true
 			}
 		}
+
 		return false
 	case "update_solana_balances":
 		if !settingsData.OnChain.Solana.Enabled {
 			return false
 		}
-		// Check if there are any solana wallets
+
 		nonEvmWallets := settings.GetNonEVMWallets(settingsData)
 		for _, w := range nonEvmWallets {
 			if w.Type == "solana" {
 				return true
 			}
 		}
+
 		return false
-	case "update_prices":
-		return settingsData.Settings.Prices.Enabled
-	case "update_stocks":
-		return settingsData.Settings.Stocks.Enabled
-	case "update_pendle":
-		return settingsData.Pendle.Markets.Enabled
-	case "update_pendle_positions":
-		return settingsData.Pendle.Positions.Enabled
 	default:
-		// For unknown jobs, assume they are enabled
 		return true
 	}
 }
@@ -475,17 +480,16 @@ func (m *Manager) SyncJobsWithSettings() error {
 
 	// Get list of all possible job names
 	allJobNames := []string{
-		"backup_grist",
-		"update_kraken",
-		"update_hyperliquid",
-		"update_lighter",
-		"update_evm_balances",
-		"update_bitcoin_balances",
-		"update_solana_balances",
-		"update_prices",
-		"update_stocks",
-		"update_pendle",
-		"update_pendle_positions",
+		"balances_evm_chains",
+		"balances_other_chains",
+		"exchange_kraken",
+		"exchange_hyperliquid",
+		"exchange_lighter",
+		"grist_backup",
+		"pendle_markets",
+		"pendle_user_positions",
+		"prices_cryptocurrencies",
+		"prices_stocks",
 	}
 
 	// Stop and remove disabled jobs

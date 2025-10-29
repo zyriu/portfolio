@@ -1,4 +1,4 @@
-package update_non_evm_balances
+package balances_other_chains
 
 import (
 	"context"

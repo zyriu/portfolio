@@ -1,4 +1,4 @@
-package update_hyperliquid
+package exchange_hyperliquid
 
 import (
 	"context"

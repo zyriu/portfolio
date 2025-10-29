@@ -85,7 +85,7 @@ func TestManagerResumeCreateErrorWhenDisabled(t *testing.T) {
 	ctx := context.Background()
 	m.Startup(ctx)
 
-	err = m.Resume("update_kraken")
+	err = m.Resume("exchange_kraken")
 	if err == nil {
 		t.Fatalf("expected error when creating disabled job")
 	}
@@ -95,7 +95,7 @@ func TestManagerSyncJobsWithSettingsStopsDisabled(t *testing.T) {
 	setupTestHome(t)
 
 	m := NewManager()
-	m.jobs["update_kraken"] = newJobController("update_kraken", time.Minute, func(ctx context.Context, args ...any) error {
+	m.jobs["exchange_kraken"] = newJobController("exchange_kraken", time.Minute, func(ctx context.Context, args ...any) error {
 		return nil
 	})
 
@@ -103,7 +103,7 @@ func TestManagerSyncJobsWithSettingsStopsDisabled(t *testing.T) {
 		t.Fatalf("sync failed: %v", err)
 	}
 
-	if _, exists := m.jobs["update_kraken"]; exists {
+	if _, exists := m.jobs["exchange_kraken"]; exists {
 		t.Fatalf("expected disabled job to be removed")
 	}
 }
@@ -167,10 +167,10 @@ func TestManagerJobsFiltersDisabled(t *testing.T) {
 	}
 
 	m := NewManager()
-	m.jobs["update_kraken"] = newJobController("update_kraken", time.Minute, func(ctx context.Context, args ...any) error {
+	m.jobs["exchange_kraken"] = newJobController("exchange_kraken", time.Minute, func(ctx context.Context, args ...any) error {
 		return nil
 	})
-	m.jobs["update_prices"] = newJobController("update_prices", time.Minute, func(ctx context.Context, args ...any) error {
+	m.jobs["prices_cryptocurrencies"] = newJobController("prices_cryptocurrencies", time.Minute, func(ctx context.Context, args ...any) error {
 		return nil
 	})
 
@@ -178,8 +178,8 @@ func TestManagerJobsFiltersDisabled(t *testing.T) {
 	if len(jobs) != 1 {
 		t.Fatalf("expected only enabled job to be returned, got %d", len(jobs))
 	}
-	if jobs[0].Name != "update_kraken" {
-		t.Fatalf("expected update_kraken job, got %s", jobs[0].Name)
+	if jobs[0].Name != "exchange_kraken" {
+		t.Fatalf("expected exchange_kraken job, got %s", jobs[0].Name)
 	}
 }
 
@@ -300,7 +300,7 @@ func TestManagerCreateJobFromSettings(t *testing.T) {
 	}
 
 	// Test creating a job that's disabled in settings
-	err = m.createJobFromSettings("update_kraken")
+	err = m.createJobFromSettings("exchange_kraken")
 	if err == nil || !strings.Contains(err.Error(), "kraken job is not enabled") {
 		t.Fatalf("expected disabled job error, got %v", err)
 	}
@@ -312,11 +312,11 @@ func TestManagerIsJobEnabledInSettings(t *testing.T) {
 	m := NewManager()
 
 	// Test with default settings (most jobs disabled)
-	if m.isJobEnabledInSettings("update_kraken") {
+	if m.isJobEnabledInSettings("exchange_kraken") {
 		t.Fatalf("expected kraken job to be disabled by default")
 	}
 
-	if m.isJobEnabledInSettings("update_prices") {
+	if m.isJobEnabledInSettings("prices_cryptocurrencies") {
 		t.Fatalf("expected prices job to be disabled by default")
 	}
 

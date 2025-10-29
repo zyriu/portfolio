@@ -196,37 +196,6 @@ wails build
 - **Check Logs**: View detailed information about data collection
 - **Restart Jobs**: Pause and resume jobs to reset them
 
-## 📁 Project Structure
-
-```
-portfolio/
-├── backend/                 # Go backend
-│   ├── helpers/            # Utility packages
-│   │   ├── coingecko/      # Price data API
-│   │   ├── grist/          # Cloud storage
-│   │   ├── kraken/         # Exchange API
-│   │   ├── hyperliquid/    # Exchange API
-│   │   ├── pendle/         # DeFi protocol
-│   │   └── settings/       # Configuration
-│   ├── jobs/               # Scheduled tasks
-│   │   ├── update_prices/  # Price updates
-│   │   ├── update_kraken/  # Exchange data
-│   │   ├── update_evm_balances/ # Blockchain data
-│   │   └── backup_grist/   # Data backup
-│   ├── manager.go          # Job orchestration
-│   └── job_controller.go   # Task management
-├── frontend/               # React frontend
-│   ├── src/
-│   │   ├── components/     # UI components
-│   │   ├── panels/         # Main views
-│   │   ├── contexts/       # State management
-│   │   └── utils/          # Helper functions
-│   └── dist/               # Built assets
-├── build/                  # Build outputs
-├── main.go                 # Application entry
-└── wails.json             # Wails configuration
-```
-
 ## 🔧 Development
 
 ### Backend Development

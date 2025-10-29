@@ -1,4 +1,4 @@
-package backup_grist
+package grist_backup
 
 import (
 	"context"

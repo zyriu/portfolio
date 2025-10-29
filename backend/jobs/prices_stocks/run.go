@@ -1,4 +1,4 @@
-package update_stocks
+package prices_stocks
 
 import (
 	"context"

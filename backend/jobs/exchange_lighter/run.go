@@ -1,4 +1,4 @@
-package update_lighter
+package exchange_lighter
 
 import (
 	"context"
