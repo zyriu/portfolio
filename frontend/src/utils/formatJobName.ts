@@ -1,7 +1,9 @@
 export function formatJobName(name: string): string {
   // Custom names for specific jobs
   const customNames: { [key: string]: string } = {
+    'balances_bitcoin': 'Bitcoin Balances',
     'balances_evm_chains': 'EVM Balances',
+    'balances_solana': 'Solana Balances',
     'exchange_hyperliquid': 'Hyperliquid',
     'exchange_kraken': 'Kraken',
     'exchange_lighter': 'Lighter',
@@ -9,9 +11,7 @@ export function formatJobName(name: string): string {
     'pendle_markets': 'Pendle Markets',
     'pendle_user_positions': 'Pendle User Positions',
     'prices_cryptocurrencies': 'Cryptocurrencies Prices',
-    'prices_stocks': 'Stocks Prices',
-    'update_bitcoin_balances': 'Bitcoin Balances',
-    'update_solana_balances': 'Solana Balances'
+    'prices_stocks': 'Stocks Prices'
   };
 
   // Return custom name if available, otherwise use default formatting

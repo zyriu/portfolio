@@ -13,12 +13,12 @@ interface JobState {
   currentStatus: string;
 }
 
-function JobCard({ 
-  job, 
+function JobCard({
+  job,
   onRefreshJobs,
   onErrorClick
-}: { 
-  job: JobState, 
+}: {
+  job: JobState,
   onRefreshJobs: () => Promise<void>,
   onErrorClick: (jobName: string) => void
 }) {
@@ -35,11 +35,9 @@ function JobCard({
   const timeUntilNext = Math.max(0, job.nextRunUnix - now);
   const timeSinceLast = now - job.lastRunUnix;
   const totalInterval = job.interval;
-  
-  // Progress: 0 at last run, 100 at next run (or special handling when running)
+
   let progress = 0;
   if (isActivelyRunning) {
-    // When running, show a pulsing full bar
     progress = 100;
   } else if (totalInterval > 0) {
     progress = Math.min(100, (timeSinceLast / totalInterval) * 100);
@@ -57,13 +55,13 @@ function JobCard({
   const handleTrigger = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isTriggering) return;
-    
+
     setIsTriggering(true);
-    
+
     try {
       await backendJobs.Trigger(job.name);
       await onRefreshJobs();
-    } catch (err) {} finally {
+    } catch (err) { } finally {
       setTimeout(() => setIsTriggering(false), 2000);
     }
   };
@@ -77,7 +75,7 @@ function JobCard({
   };
 
   return (
-    <div 
+    <div
       className={`job-card ${hasError ? 'has-error' : ''} ${hasError ? 'clickable' : ''}`}
       onClick={handleCardClick}
     >
@@ -87,7 +85,7 @@ function JobCard({
           <span className={`job-status ${isActivelyRunning ? 'executing' : job.running ? 'running' : 'paused'}`}>
             {isActivelyRunning ? '⚡ Executing' : job.running ? '● Running' : '○ Paused'}
           </span>
-          <button 
+          <button
             className="job-reload-btn"
             onClick={handleTrigger}
             title="Reload job"
@@ -101,13 +99,13 @@ function JobCard({
           </button>
         </div>
         {hasError && <div className="job-error-icon" title={job.err} />}
-        </div>
-      
+      </div>
+
       <div className="job-progress-section">
         <div className="job-progress-container">
-          <div 
-            className={`job-progress-bar ${job.isExecuting ? 'running' : ''}`} 
-            style={{ width: `${progress}%` }} 
+          <div
+            className={`job-progress-bar ${job.isExecuting ? 'running' : ''}`}
+            style={{ width: `${progress}%` }}
           />
         </div>
         <div className="job-timer">
@@ -118,12 +116,12 @@ function JobCard({
   );
 }
 
-export default function Jobs({ 
-  jobs, 
+export default function Jobs({
+  jobs,
   onRefreshJobs,
   onErrorClick
-}: { 
-  jobs: JobState[], 
+}: {
+  jobs: JobState[],
   onRefreshJobs: () => Promise<void>,
   onErrorClick: (jobName: string) => void
 }) {
@@ -133,10 +131,10 @@ export default function Jobs({
   return (
     <div className="jobs">
       {enabledJobs.length === 0 ? (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           height: '100%',
           fontStyle: 'italic',
           opacity: 0.6
@@ -146,9 +144,9 @@ export default function Jobs({
       ) : (
         <div className="jobs-grid">
           {jobs.map((job) => (
-            <JobCard 
-              key={job.name} 
-              job={job} 
+            <JobCard
+              key={job.name}
+              job={job}
               onRefreshJobs={onRefreshJobs}
               onErrorClick={onErrorClick}
             />

@@ -3,8 +3,8 @@ import { useJobExecution, JobExecution } from "../contexts/JobExecutionContext";
 import { formatJobName } from "../utils/formatJobName";
 import { backendJobs } from "../backend";
 
-function JobExecutionItem({ execution, onSelect, isSelected, isExecuting }: { 
-  execution: JobExecution, 
+function JobExecutionItem({ execution, onSelect, isSelected, isExecuting }: {
+  execution: JobExecution,
   onSelect: (execution: JobExecution) => void,
   isSelected: boolean,
   isExecuting: boolean
@@ -32,10 +32,10 @@ function JobExecutionItem({ execution, onSelect, isSelected, isExecuting }: {
   };
 
   return (
-    <div 
+    <div
       className={`job-execution-item ${isSelected ? 'selected' : ''} ${isExecuting ? 'executing' : ''}`}
       onClick={() => onSelect(execution)}
-      style={{ 
+      style={{
         cursor: isExecuting ? 'not-allowed' : 'pointer',
         opacity: isExecuting ? 0.6 : 1
       }}
@@ -90,10 +90,10 @@ function LogViewerCard({ execution }: { execution: JobExecution }) {
   );
 }
 
-export default function Logs({ 
-  errorJobName, 
-  onErrorLogExpanded 
-}: { 
+export default function Logs({
+  errorJobName,
+  onErrorLogExpanded
+}: {
   errorJobName: string | null;
   onErrorLogExpanded: () => void;
 }) {
@@ -116,17 +116,17 @@ export default function Logs({
           }
         });
         setExecutingJobs(executing);
-        
+
         const runningExecutions = executions.filter(exec => exec.status === 'running');
         const executingExecutionsMap = new Map<string, JobExecution>();
-        
+
         runningExecutions.forEach(exec => {
           const existing = executingExecutionsMap.get(exec.jobName);
           if (!existing || new Date(exec.startTime).getTime() > new Date(existing.startTime).getTime()) {
             executingExecutionsMap.set(exec.jobName, exec);
           }
         });
-        
+
         setCurrentExecutingExecutions(executingExecutionsMap);
       } catch (err) {
       }
@@ -153,27 +153,22 @@ export default function Logs({
     return () => window.removeEventListener('resize', updateColumns);
   }, []);
 
-  // Auto-expand the most recent failed execution for the error job
   useEffect(() => {
     if (errorJobName && executions.length > 0) {
-      // Find the most recent failed execution for the specific job
-      const failedExecutions = executions.filter(exec => 
+      const failedExecutions = executions.filter(exec =>
         exec.jobName === errorJobName && exec.status === 'failed'
       );
-      
+
       if (failedExecutions.length > 0) {
-        // Sort by start time (most recent first) and take the first one
-        const mostRecentFailed = failedExecutions.sort((a, b) => 
+        const mostRecentFailed = failedExecutions.sort((a, b) =>
           new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
         )[0];
-        
-        // Auto-expand after a short delay to ensure the UI is ready
+
         setTimeout(() => {
           setSelectedExecution(mostRecentFailed);
-          onErrorLogExpanded(); // Clear the errorJobName
+          onErrorLogExpanded();
         }, 100);
       } else {
-        // No failed executions found, clear the errorJobName
         onErrorLogExpanded();
       }
     }
@@ -198,13 +193,13 @@ export default function Logs({
 
   const getCardInsertionIndex = () => {
     if (!selectedExecution) return -1;
-    
+
     const selectedIndex = executions.findIndex(exec => exec.id === selectedExecution.id);
     if (selectedIndex === -1) return -1;
 
     const currentRow = Math.floor(selectedIndex / columnsPerRow);
     const lastIndexInRow = Math.min((currentRow + 1) * columnsPerRow - 1, executions.length - 1);
-    
+
     return lastIndexInRow;
   };
 
