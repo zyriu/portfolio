@@ -4,6 +4,12 @@ import "time"
 
 type Pendle struct{}
 
+type Amounts struct {
+	USD   float64 `json:"usd"`
+	Asset float64 `json:"asset"`
+	ETH   float64 `json:"eth"`
+}
+
 type Asset struct {
 	Name     string   `json:"name"`
 	Decimals int      `json:"decimals"`
@@ -24,6 +30,11 @@ type AssetsMap map[string]Asset
 type claimTokenAmount struct {
 	Token  string `json:"token"`
 	Amount string `json:"amount"`
+}
+
+type LegData struct {
+	Unit    float64 `json:"unit"`
+	SpentV2 Amounts `json:"spent_v2"`
 }
 
 type Market struct {
@@ -135,4 +146,31 @@ type UserPositions struct {
 		UpdatedAt       string                 `json:"updatedAt"`
 		ErrorMessage    string                 `json:"errorMessage"`
 	} `json:"positions"`
+}
+
+type UserTransactions struct {
+	Total   int `json:"total"`
+	Results []struct {
+		ChainID      int       `json:"chainId"`
+		Market       string    `json:"market"`
+		User         string    `json:"user"`
+		Timestamp    time.Time `json:"timestamp"` // e.g. 2025-10-29T10:49:09.000Z
+		Action       string    `json:"action"`
+		PTData       LegData   `json:"ptData"`
+		YTData       LegData   `json:"ytData"`
+		LPData       LegData   `json:"lpData"`
+		PriceInAsset struct {
+			PT float64 `json:"pt"`
+			YT float64 `json:"yt"`
+			LP float64 `json:"lp"`
+		} `json:"priceInAsset"`
+		Profit                  Amounts `json:"profit"`
+		TxValueAsset            float64 `json:"txValueAsset"`
+		AssetUSD                float64 `json:"assetUsd"`
+		AssetETH                float64 `json:"assetEth"`
+		PTExchangeRate          float64 `json:"ptExchangeRate"`
+		EffectivePTExchangeRate float64 `json:"effectivePtExchangeRate"`
+		PTExchangeRateAfter     float64 `json:"ptExchangeRateAfter"`
+		TxHash                  string  `json:"txHash"`
+	} `json:"results"`
 }

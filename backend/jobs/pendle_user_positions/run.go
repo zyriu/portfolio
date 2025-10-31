@@ -3,6 +3,8 @@ package pendle_user_positions
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/zyriu/portfolio/backend/helpers/grist"
 	"github.com/zyriu/portfolio/backend/helpers/jobstatus"
@@ -70,7 +72,9 @@ func Run(ctx context.Context, _ ...any) error {
 	updateStatus(fmt.Sprintf("✓ Built maps: %d assets, %d markets", len(assetsMap), len(marketsMap)))
 
 	var yieldPositions []grist.Upsert
-	var missingTickers []grist.Upsert
+
+	// Update missing tickers to Tokens table to be able to compute claimable amounts
+	var missingTickers map[string][]string
 
 	for i, wallet := range wallets {
 		updateStatus(fmt.Sprintf("Checking wallet %d/%d: %s (%s)", i+1, len(wallets), wallet.Label, wallet.Address))
@@ -80,22 +84,30 @@ func Run(ctx context.Context, _ ...any) error {
 		}
 
 		updateStatus(fmt.Sprintf("[%s] Found %d position groups", wallet.Label, len(userPositions.Positions)))
-		totalOpenPositions := 0.0
+
+		var earliestTimestamp time.Time
 		for chainIdx, positions := range userPositions.Positions {
 			if positions.TotalOpen == 0 {
 				updateStatus(fmt.Sprintf("[%s]   Chain group %d: no open positions", wallet.Label, chainIdx+1))
 				continue
 			}
 
-			updateStatus(fmt.Sprintf("[%s]   Chain group %d: %.0f open position(s)", wallet.Label, chainIdx+1, positions.TotalOpen))
-			totalOpenPositions += positions.TotalOpen
-			beforeCount := len(yieldPositions)
-			yieldPositions, missingTickers = appendOpenedPositions(wallet.Label, yieldPositions, missingTickers,
-				positions.OpenPositions, marketsMap, assetsMap, prices, tokens)
-			addedCount := len(yieldPositions) - beforeCount
-			updateStatus(fmt.Sprintf("[%s]   Processed %d position(s)", wallet.Label, addedCount))
+			var processedPositions []grist.Upsert
+			processedPositions, earliestTimestamp, missingTickers = processPositions(wallet.Label, positions.OpenPositions, earliestTimestamp, missingTickers, assetsMap, marketsMap, prices, tokens)
+			yieldPositions = append(yieldPositions, processedPositions...)
+			updateStatus(fmt.Sprintf("[%s]   Processed %d position(s)", wallet.Label, len(processedPositions)))
 		}
-		updateStatus(fmt.Sprintf("[%s] ✓ Total open positions: %.0f", wallet.Label, totalOpenPositions))
+
+		updateStatus(fmt.Sprintf("[%s] Fetching transactions since %s", wallet.Label, earliestTimestamp.UTC().Format(time.RFC3339)))
+		userTransactions, err := p.GetUserTransactions(ctx, wallet.Address, earliestTimestamp)
+		if err != nil {
+			return err
+		}
+
+		updateStatus(fmt.Sprintf("[%s] Found %d transaction(s)", wallet.Label, userTransactions.Total))
+		for _, transaction := range userTransactions.Results {
+			log.Println("transaction", transaction)
+		}
 	}
 
 	if len(yieldPositions) > 0 {
@@ -109,10 +121,26 @@ func Run(ctx context.Context, _ ...any) error {
 	}
 
 	if len(missingTickers) > 0 {
-		updateStatus(fmt.Sprintf("Adding %d missing tickers to Tokens table...", len(missingTickers)))
-		if err := g.UpsertRecords(ctx, "Tokens", missingTickers, grist.UpsertOpts{}); err != nil {
+		missingTickersRecords := make([]grist.Upsert, 0, len(missingTickers))
+		for chain, addresses := range missingTickers {
+			for _, address := range addresses {
+				missingTickersRecords = append(missingTickersRecords, grist.Upsert{
+					Require: map[string]any{
+						"Chain":   chain,
+						"Address": address,
+					},
+					Fields: map[string]any{},
+				})
+			}
+		}
+
+		updateStatus(fmt.Sprintf("Adding %d missing tickers to Tokens table...", len(missingTickersRecords)))
+		if err := g.UpsertRecords(ctx, "Tokens", missingTickersRecords, grist.UpsertOpts{}); err != nil {
 			return err
 		}
+		updateStatus(fmt.Sprintf("✓ Successfully synced %d missing tickers", len(missingTickersRecords)))
+	} else {
+		updateStatus("No missing tickers found")
 	}
 
 	return nil

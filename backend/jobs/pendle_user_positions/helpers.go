@@ -2,6 +2,7 @@ package pendle_user_positions
 
 import (
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -13,76 +14,99 @@ import (
 	"github.com/zyriu/portfolio/backend/helpers/token"
 )
 
-func appendOpenedPositions(wallet string, yieldPositions []grist.Upsert, missingTickers []grist.Upsert,
-	positions []pendle.OpenOrClosedPosition, markets pendle.MarketsMap, assets pendle.AssetsMap, prices grist.Prices,
-	tokens grist.Tokens) ([]grist.Upsert, []grist.Upsert) {
+func createRecord(
+	wallet string,
+	market pendle.Market,
+	openPosition pendle.OpenOrClosedPosition,
+	rawName string,
+	exposure string,
+	expiry string,
+	prices grist.Prices,
+	tokens grist.Tokens,
+	missingTickers map[string][]string) (grist.Upsert, map[string][]string) {
 
-	// Track seen missing tickers to avoid duplicates
-	seenMissingTickers := make(map[string]bool)
+	re := regexp.MustCompile(`\s*\(([^)]+)\)$`)
+	name := re.ReplaceAllString(rawName, "")
+	underlying := rawName
+	if matches := re.FindStringSubmatch(rawName); len(matches) > 1 {
+		underlying = matches[1]
+	}
 
-	createRecord := func(c string, name string, expiry string, underlying string, exposure string, IY float64,
-		poolType string, position pendle.TokenPosition) grist.Upsert {
+	poolType := "PT"
+	position := openPosition.PT
+	if openPosition.LP.Valuation > 0 {
+		poolType = "LP"
+		position = openPosition.LP
+		name = strings.Replace(name, "PT", "LP", 1)
+	} else if openPosition.YT.Valuation > 0 {
+		poolType = "YT"
+		position = openPosition.YT
+		name = strings.Replace(name, "PT", "YT", 1)
+	}
 
-		claimable := ""
-		for _, claim := range position.ClaimTokenAmounts {
-			if t, ok := tokens[claim.Token]; ok && claim.Amount != "0" {
-				amount, _ := decimal.NewFromString(claim.Amount)
-				decimalFactor := decimal.New(1, t.Decimal)
-				normalizedAmount := amount.Div(decimalFactor)
-				priceDec := decimal.NewFromFloat(prices[t.Ticker])
+	claimable := ""
+	for _, claim := range position.ClaimTokenAmounts {
+		if t, ok := tokens[claim.Token]; ok && claim.Amount != "0" {
+			amount, _ := decimal.NewFromString(claim.Amount)
+			decimalFactor := decimal.New(1, t.Decimal)
+			normalizedAmount := amount.Div(decimalFactor)
+			priceDec := decimal.NewFromFloat(prices[t.Ticker])
 
-				toAdd, _ := decimal.NewFromString(claimable)
-				claimable = normalizedAmount.Mul(priceDec).Add(toAdd).String()
-			} else {
-				split := strings.SplitN(claim.Token, "-", 2)
-				chainID, _ := strconv.Atoi(split[0])
-				chain := chain.IDToName(chainID)
-				address := split[1]
-				key := chain + ":" + address
+			toAdd, _ := decimal.NewFromString(claimable)
+			claimable = normalizedAmount.Mul(priceDec).Add(toAdd).String()
+		} else {
+			split := strings.SplitN(claim.Token, "-", 2)
+			chainID, _ := strconv.Atoi(split[0])
+			chain := chain.IDToName(chainID)
+			address := split[1]
 
-				// Only add if we haven't seen this token before
-				if !seenMissingTickers[key] {
-					seenMissingTickers[key] = true
-					missingTickers = append(missingTickers, grist.Upsert{
-						Require: map[string]any{
-							"Chain":   chain,
-							"Address": address,
-						},
-						Fields: map[string]any{},
-					})
-				}
+			if !slices.Contains(missingTickers[chain], address) {
+				missingTickers[chain] = append(missingTickers[chain], address)
 			}
-		}
-
-		return grist.Upsert{
-			Require: map[string]any{
-				"Wallet":   wallet,
-				"Chain":    c,
-				"Protocol": "Pendle",
-				"Name":     name,
-				"Expiry":   expiry,
-			},
-			Fields: map[string]any{
-				"Underlying":     underlying,
-				"Asset_Type":     token.GetAssetType(underlying),
-				"Exposure":       exposure,
-				"Pool_Type":      poolType,
-				"Current_Value":  position.Valuation,
-				"IY":             IY,
-				"Claimable_USD_": claimable,
-			},
 		}
 	}
 
+	return grist.Upsert{
+		Require: map[string]any{
+			"Wallet":   wallet,
+			"Chain":    chain.IDToName(market.ChainID),
+			"Protocol": "Pendle",
+			"Name":     name,
+			"Expiry":   expiry,
+		},
+		Fields: map[string]any{
+			"Underlying":     underlying,
+			"Asset_Type":     token.GetAssetType(underlying),
+			"Exposure":       exposure,
+			"Pool_Type":      poolType,
+			"Current_Value":  position.Valuation,
+			"IY":             market.Details.ImpliedAPY,
+			"Claimable_USD_": claimable,
+		},
+	}, missingTickers
+}
+
+func processPositions(
+	wallet string,
+	positions []pendle.OpenOrClosedPosition,
+	earliestTimestamp time.Time,
+	missingTickers map[string][]string,
+	assets pendle.AssetsMap,
+	markets pendle.MarketsMap,
+	prices grist.Prices,
+	tokens grist.Tokens) ([]grist.Upsert, time.Time, map[string][]string) {
+
+	processedPositions := make([]grist.Upsert, 0, len(positions))
+
+	dateRe := regexp.MustCompile(`(\d{1,2}[A-Z]{3}\d{4})`)
+
 	for _, position := range positions {
-		// Check if market data exists (may be missing for matured/expired positions)
+		// Skip matured positions that are no longer in the markets API
 		market, marketExists := markets[position.MarketID]
 		if !marketExists {
-			// Skip matured positions that are no longer in the markets API
 			continue
 		}
 
-		// Check if PT and SY assets exist
 		ptAsset, ptExists := assets[market.PT]
 		syAsset, syExists := assets[market.SY]
 		if !ptExists || !syExists {
@@ -90,36 +114,25 @@ func appendOpenedPositions(wallet string, yieldPositions []grist.Upsert, missing
 			continue
 		}
 
-		c := chain.IDToName(market.ChainID)
-		IY := market.Details.ImpliedAPY
-
-		re := regexp.MustCompile(`\s*\(([^)]+)\)$`)
-		s := ptAsset.Name
-		name := re.ReplaceAllString(s, "")
-
-		// Extract asset from parentheses, or use the full name as fallback
-		asset := s
-		if matches := re.FindStringSubmatch(s); len(matches) > 1 {
-			asset = matches[1]
+		if market.Timestamp != "" {
+			if mt, perr := time.Parse(time.RFC3339, market.Timestamp); perr == nil && (earliestTimestamp.IsZero() || mt.Before(earliestTimestamp)) {
+				earliestTimestamp = mt
+			}
 		}
 
-		exposure := syAsset.Name
+		// Defensive: check FindString returns nonempty string; parse errors are ignored but ensure zero time isn't used for garbage
+		dateStr := dateRe.FindString(ptAsset.Symbol)
+		expiry := ""
+		if dateStr != "" {
+			if t, err := time.Parse("2Jan2006", dateStr); err == nil {
+				expiry = t.Format("02 Jan 2006")
+			}
+		}
 
-		t, _ := time.Parse("2Jan2006", regexp.MustCompile(`(\d{1,2}[A-Z]{3}\d{4})`).FindString(ptAsset.Symbol))
-		expiry := t.Format("02 Jan 2006")
-
-		if position.LP.Valuation > 0 {
-			name = strings.Replace(name, "PT", "LP", 1)
-			yieldPositions = append(yieldPositions, createRecord(c, name, expiry, asset, exposure, IY, "LP", position.LP))
-		}
-		if position.PT.Valuation > 0 {
-			yieldPositions = append(yieldPositions, createRecord(c, name, expiry, asset, exposure, IY, "PT", position.PT))
-		}
-		if position.YT.Valuation > 0 {
-			name = strings.Replace(name, "PT", "YT", 1)
-			yieldPositions = append(yieldPositions, createRecord(c, name, expiry, asset, exposure, IY, "YT", position.YT))
-		}
+		var record grist.Upsert
+		record, missingTickers = createRecord(wallet, market, position, ptAsset.Name, syAsset.Name, expiry, prices, tokens, missingTickers)
+		processedPositions = append(processedPositions, record)
 	}
 
-	return yieldPositions, missingTickers
+	return processedPositions, earliestTimestamp, missingTickers
 }

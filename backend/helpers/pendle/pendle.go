@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/zyriu/portfolio/backend/helpers/misc"
 )
@@ -20,10 +23,10 @@ func InitiateClient() (Pendle, error) {
 func (p *Pendle) FetchAllMarkets(ctx context.Context) (Markets, error) {
 	var markets Markets
 
-	path := "/v1/markets/all?isActive=true"
-	endpoint := apiBaseUrl + path
+	endpoint := "/v1/markets/all?isActive=true"
+	u := apiBaseUrl + endpoint
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return markets, err
 	}
@@ -43,10 +46,10 @@ func (p *Pendle) FetchAllMarkets(ctx context.Context) (Markets, error) {
 func (p *Pendle) FetchAssets(ctx context.Context) (Assets, error) {
 	var assets Assets
 
-	path := "/v1/assets/all"
-	endpoint := apiBaseUrl + path
+	endpoint := "/v1/assets/all"
+	u := apiBaseUrl + endpoint
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return assets, err
 	}
@@ -66,9 +69,9 @@ func (p *Pendle) FetchAssets(ctx context.Context) (Assets, error) {
 func (p *Pendle) GetDetailedMarketData(ctx context.Context, chainID int, address string) (MarketDetailedData, error) {
 	var marketDetailedData MarketDetailedData
 
-	endpoint := fmt.Sprintf("%s/v2/%d/markets/%s/data", apiBaseUrl, chainID, address)
+	u := fmt.Sprintf("%s/v2/%d/markets/%s/data", apiBaseUrl, chainID, address)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return marketDetailedData, err
 	}
@@ -88,10 +91,10 @@ func (p *Pendle) GetDetailedMarketData(ctx context.Context, chainID int, address
 func (p *Pendle) GetUserPositions(ctx context.Context, user string) (UserPositions, error) {
 	var userPositions UserPositions
 
-	path := "/v1/dashboard/positions/database"
-	endpoint := fmt.Sprintf("%s%s/%s", apiBaseUrl, path, user)
+	endpoint := apiBaseUrl + "/v1/dashboard/positions/database"
+	u := fmt.Sprintf("%s/%s", endpoint, user)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return userPositions, err
 	}
@@ -106,4 +109,36 @@ func (p *Pendle) GetUserPositions(ctx context.Context, user string) (UserPositio
 	}
 
 	return userPositions, nil
+}
+
+func (p *Pendle) GetUserTransactions(ctx context.Context, user string, from time.Time) (UserTransactions, error) {
+	var userTransactions UserTransactions
+
+	endpoint := apiBaseUrl + "/v1/pnl/transactions"
+	q := url.Values{}
+	q.Set("user", user)
+	q.Set("fromTimestamp", from.Format(time.RFC3339))
+	u := endpoint + "?" + q.Encode()
+
+	log.Println("u", u)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return userTransactions, err
+	}
+
+	resp := misc.DoWithRetry(ctx, req)
+	if resp.Err != nil {
+		return userTransactions, fmt.Errorf("pendle.GetUserTransactions: request failed: %w", resp.Err)
+	}
+
+	if resp.Status < 200 || resp.Status >= 300 {
+		return userTransactions, fmt.Errorf("pendle.GetUserTransactions: unexpected status %d: %s", resp.Status, string(resp.Body))
+	}
+
+	if err := json.Unmarshal(resp.Body, &userTransactions); err != nil {
+		return userTransactions, fmt.Errorf("pendle.GetUserTransactions: decode response: %w", err)
+	}
+
+	return userTransactions, nil
 }
