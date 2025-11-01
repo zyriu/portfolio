@@ -431,7 +431,11 @@ func (m *Manager) checkJobSettingsAndCreate(name string, lastRun time.Time, crea
 	}
 
 	// Create the job if requested and enabled
-	if isEnabled && createIfEnabled {
+	if createIfEnabled {
+		if !isEnabled {
+			return false, fmt.Errorf("%s job is not enabled", name)
+		}
+
 		m.AddAndStartWithLastRun(name, interval, jobFunc, lastRun, args...)
 	}
 

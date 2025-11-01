@@ -289,8 +289,7 @@ func TestManagerCreateJobFromSettings(t *testing.T) {
 	setupTestHome(t)
 
 	m := NewManager()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	m.Startup(ctx)
 
 	// Test creating a job that doesn't exist in settings
