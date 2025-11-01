@@ -53,13 +53,25 @@ func (f *TwelveData) GetBatchPrices(ctx context.Context, tickers []string) ([]Pr
 		return nil, resp.Err
 	}
 
+	// Handle single ticker vs multiple tickers response format
+	// Single ticker: {"price":"456.56000"}
+	if len(tickers) == 1 {
+		var price Price
+		if err := json.Unmarshal(resp.Body, &price); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal single ticker price: %v", err)
+		}
+
+		price.Ticker = tickers[0]
+		return []Price{price}, nil
+	}
+
+	// Multiple tickers: {"TSLA":{"price":"456.56000"},"AAPL":{"price":"270.37000"}}
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		return nil, err
 	}
 
 	prices := make([]Price, 0, len(tickers))
-
 	for _, ticker := range tickers {
 		v, ok := raw[ticker]
 		if !ok || len(v) == 0 {
