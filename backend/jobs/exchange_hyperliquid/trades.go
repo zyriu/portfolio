@@ -34,62 +34,65 @@ func bookTrade(book *grist.Book, trade grist.Trade) grist.Trade {
 	return trade
 }
 
-func processFills(h hyperliquid.Hyperliquid, userFills []hyperliquid.UserFill) ([]grist.Trade, error) {
-	tradesSlice := make([]grist.Trade, 0, len(userFills))
-
-	type aggKey struct {
-		Coin    string
-		TimeMin int64
-		Side    string
-		Price   string
-	}
-	type aggEntry struct {
-		fill  *hyperliquid.UserFill
-		count int
-	}
-	aggMap := make(map[aggKey]*aggEntry)
-
-	for _, f := range userFills {
-		timeMin := f.Time / 60000 // Convert milliseconds to minutes
-		key := aggKey{
-			Coin:    f.Coin,
-			TimeMin: timeMin,
-			Side:    f.Side,
-			Price:   f.Px,
-		}
-		entry, exists := aggMap[key]
-		if !exists {
-			cp := f
-			aggMap[key] = &aggEntry{
-				fill:  &cp,
-				count: 1,
+func generateConfigForAggregation() trades.TradeConfig {
+	return trades.TradeConfig{
+		GetAsset: func(t any) string {
+			return t.(*hyperliquid.UserFill).Coin
+		},
+		GetTimeMin: func(t any) int64 {
+			return t.(*hyperliquid.UserFill).Time / 60000
+		},
+		GetDirection: func(t any) string {
+			return t.(*hyperliquid.UserFill).Side
+		},
+		GetPrice: func(t any) string {
+			return t.(*hyperliquid.UserFill).Px
+		},
+		GetSize: func(t any) string {
+			return t.(*hyperliquid.UserFill).Sz
+		},
+		GetFee: func(t any) string {
+			return t.(*hyperliquid.UserFill).Fee
+		},
+		GetCost: nil,
+		GetTime: func(t any) any {
+			return t.(*hyperliquid.UserFill).Time
+		},
+		GetTradeID: func(t any) any {
+			return t.(*hyperliquid.UserFill).Tid
+		},
+		UpdateSize: func(t any, v string) {
+			t.(*hyperliquid.UserFill).Sz = v
+		},
+		UpdateFee: func(t any, v string) {
+			t.(*hyperliquid.UserFill).Fee = v
+		},
+		UpdateCost: nil,
+		UpdateTime: func(t any, v any) {
+			if time, ok := v.(int64); ok {
+				t.(*hyperliquid.UserFill).Time = time
 			}
-			continue
-		}
+		},
+		UpdateTradeID: func(t any, v any) {
+			if tid, ok := v.(int64); ok {
+				t.(*hyperliquid.UserFill).Tid = tid
+			}
+		},
+	}
+}
 
-		parseF := func(s string) float64 {
-			val, _ := strconv.ParseFloat(s, 64)
-			return val
-		}
-		formatF := func(f float64) string {
-			return fmt.Sprintf("%.12g", f)
-		}
-
-		// Aggregate size and fee
-		entry.fill.Sz = formatF(parseF(entry.fill.Sz) + parseF(f.Sz))
-		entry.fill.Fee = formatF(parseF(entry.fill.Fee) + parseF(f.Fee))
-		entry.count++
-
-		// Keep the earliest trade ID and time
-		if f.Time < entry.fill.Time {
-			entry.fill.Tid = f.Tid
-			entry.fill.Time = f.Time
-		}
+func processFills(h hyperliquid.Hyperliquid, userFills []hyperliquid.UserFill) ([]grist.Trade, error) {
+	fillsInterface := make([]any, len(userFills))
+	for i := range userFills {
+		fillsInterface[i] = &userFills[i]
 	}
 
-	// Process aggregated fills
+	config := generateConfigForAggregation()
+	aggMap := trades.AggregateTrades(fillsInterface, config)
+
+	tradesSlice := make([]grist.Trade, 0, len(aggMap))
 	for _, entry := range aggMap {
-		f := entry.fill
+		f := entry.Trade.(*hyperliquid.UserFill)
 		price, err := strconv.ParseFloat(f.Px, 64)
 		if err != nil {
 			return tradesSlice, err
@@ -134,7 +137,7 @@ func processFills(h hyperliquid.Hyperliquid, userFills []hyperliquid.UserFill) (
 			FeeUSD:           feeUSD,
 			PnL:              0,
 			TradeID:          strconv.FormatInt(f.Tid, 10),
-			AggregatedTrades: entry.count,
+			AggregatedTrades: entry.Count,
 		})
 	}
 
@@ -158,7 +161,6 @@ func updateTrades(ctx context.Context, h hyperliquid.Hyperliquid, g grist.Grist,
 
 	var seed int64
 	if len(latestTrades) > 0 {
-		// Note: Add 1ms to prevent inclusion of already processed latest trade
 		seed = latestTrades[0].Time + 1
 		updateStatus(fmt.Sprintf("[%s] Fetching trades after timestamp %d...", wallet.Label, seed))
 	} else {
@@ -225,7 +227,7 @@ func updateTrades(ctx context.Context, h hyperliquid.Hyperliquid, g grist.Grist,
 			break
 		}
 
-		seed = fills[2000-1].Time + 1 // Move seed up by 1ms to avoid refetching the last entry
+		seed = fills[2000-1].Time + 1
 		updateStatus(fmt.Sprintf("[%s] More fills available, continuing with next batch...", wallet.Label))
 	}
 
