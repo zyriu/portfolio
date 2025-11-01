@@ -17,7 +17,7 @@ func GetAssetType(ticker string) string {
 func IsStablecoin(ticker string) bool {
 	t := strings.ToUpper(ticker)
 	switch t {
-	case "DAI", "EUR", "ZEUR", "ZUSD":
+	case "DAI", "EUR", "USX", "ZEUR", "ZUSD":
 		return true
 	default:
 		return strings.Contains(t, "USD")
